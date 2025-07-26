@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "263340668465",
+    "project_id": "askhere-864df",
+    "storage_bucket": "askhere-864df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:263340668465:android:97376a5aaae7a48ced8710",
+        "android_client_info": {
+          "package_name": "com.example.ask"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpfifYt1v6DURg_0fjT86ec__LIUhazBQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
