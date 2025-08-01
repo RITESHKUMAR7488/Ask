@@ -30,6 +30,10 @@ android {
             )
         }
     }
+    buildFeatures{
+        dataBinding=true
+        viewBinding=true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -56,4 +60,11 @@ dependencies {
     kapt(libs.hilt.android.compiler)
     //toast
     implementation (libs.motiontoast)
+    //gson
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.gson)
+    implementation(libs.okhttp)
+    implementation (libs.androidx.swiperefreshlayout)
+    implementation(libs.glide)
 }
