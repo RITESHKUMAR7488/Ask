@@ -2,6 +2,8 @@ package com.example.ask.addModule.repositories
 
 import androidx.lifecycle.MutableLiveData
 import com.example.ask.addModule.models.ImageUploadResponse
+import com.example.ask.addModule.models.QueryModel
+import com.example.ask.utilities.UiState
 import java.io.File
 
 interface RepositoryMain {
@@ -11,4 +13,12 @@ interface RepositoryMain {
         data: MutableLiveData<ImageUploadResponse>,
         error: MutableLiveData<Throwable>
     )
+
+    fun addQuery(queryModel: QueryModel, result: (UiState<String>) -> Unit)
+
+    fun getUserQueries(userId: String, result: (UiState<List<QueryModel>>) -> Unit)
+
+    fun getAllQueries(result: (UiState<List<QueryModel>>) -> Unit)
+
+    fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit)
 }

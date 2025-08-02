@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".MyApplication"
@@ -13,8 +18,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
         <activity
+            android:name=".addModule.uis.AddQueryActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainModule.uis.activities.MainScreen"
-            android:exported="true" >
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -26,16 +34,13 @@
             android:exported="false" />
         <activity
             android:name=".onBoardingModule.uis.RegisterActivity"
-            android:exported="false"/>
-
+            android:exported="false" />
         <activity
             android:name=".onBoardingModule.uis.FirstScreen"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="false" />
-
-
     </application>
 
 </manifest>

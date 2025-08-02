@@ -27,4 +27,5 @@
     <color name="status_progress_color">#FF9800</color>
     <color name="status_closed_color">#9E9E9E</color>
     <color name="chip_background">#E3F2FD</color>
+
 </resources>
