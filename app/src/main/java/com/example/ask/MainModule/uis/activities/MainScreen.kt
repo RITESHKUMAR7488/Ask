@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import com.example.ask.MainModule.uis.fragments.HomeFragment
 import com.example.ask.R
 import com.example.ask.addModule.uis.AddQueryActivity
+import com.example.ask.communityModule.uis.Activities.CreateCommunityActicity
 import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.utilities.BaseActivity
 import kotlinx.coroutines.withContext
@@ -24,6 +25,11 @@ class MainScreen : BaseActivity() {
                 when(item.itemId){
                     R.id.Add->{
                         val intent= Intent(this@MainScreen,AddQueryActivity::class.java)
+                        startActivity(intent)
+                        true
+                    }
+                    R.id.community->{
+                        val intent= Intent(this@MainScreen, CreateCommunityActicity::class.java)
                         startActivity(intent)
                         true
                     }

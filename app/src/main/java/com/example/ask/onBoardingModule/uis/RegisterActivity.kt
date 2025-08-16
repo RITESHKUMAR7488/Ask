@@ -10,6 +10,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.databinding.DataBindingUtil
 import com.example.ask.MainActivity
+import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.databinding.ActivityRegisterBinding
 import com.example.ask.onBoardingModule.models.UserModel
@@ -95,7 +96,7 @@ class RegisterActivity : BaseActivity() {
 
 
                         )
-                        startActivity(Intent(this,MainActivity::class.java))
+                        startActivity(Intent(this, MainScreen::class.java))
 
                     }
                 }

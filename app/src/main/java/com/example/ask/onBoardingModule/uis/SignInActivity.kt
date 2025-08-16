@@ -11,6 +11,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.databinding.DataBindingUtil
 import com.example.ask.MainActivity
+import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.databinding.ActivitySignInBinding
 import com.example.ask.onBoardingModule.viewModels.OnBoardingViewModel
@@ -30,6 +31,10 @@ class SignInActivity : BaseActivity() {
         with(binding) {
             btnSignIn.setOnClickListener{
                 logIn()
+            }
+            btnSignUp.setOnClickListener {
+                val intent= Intent(this@SignInActivity,RegisterActivity::class.java)
+                startActivity(intent)
             }
 
 
@@ -61,7 +66,7 @@ class SignInActivity : BaseActivity() {
                                 binding.progressBar.visibility = View.GONE
                                 binding.tvSignIn.visibility = View.VISIBLE
                                 preferenceManager.isLoggedIn = true  // ✅ keep this after repository sets userModel
-                                startActivity(Intent(this@SignInActivity, MainActivity::class.java))
+                                startActivity(Intent(this@SignInActivity, MainScreen::class.java))
                                 finish()
                             }
                             is UiState.Failure -> {
