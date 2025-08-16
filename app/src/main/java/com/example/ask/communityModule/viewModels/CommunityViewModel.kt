@@ -10,17 +10,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class CommunityViewModel @Inject constructor(private val repository: CommunityRepository): ViewModel() {
+class CommunityViewModel @Inject constructor(
+    private val repository: CommunityRepository
+) : ViewModel() {
 
+    // 🔹 Add Community
     fun addCommunity(
         userId: String,
         model: CommunityModels,
         role: String
     ): LiveData<UiState<CommunityModels>> {
-        val successData= MutableLiveData<UiState<CommunityModels>>()
-        successData.value= UiState.Loading
-        repository.addCommunity(userId,model,role){
-            successData.value= it
+        val successData = MutableLiveData<UiState<CommunityModels>>()
+        successData.value = UiState.Loading
+        repository.addCommunity(userId, model, role) { result ->
+            successData.value = result
         }
         return successData
     }
@@ -31,13 +34,24 @@ class CommunityViewModel @Inject constructor(private val repository: CommunityRe
 
     fun getUserCommunities(userId: String) {
         _userCommunities.value = UiState.Loading
-        repository.getUserCommunity(userId) {
-            _userCommunities.value = it
+
+        // Create dummy CommunityModels and role for the repository call
+        val dummyModel = CommunityModels()
+        val dummyRole = ""
+
+        repository.getUserCommunity(userId, dummyModel, dummyRole) { result ->
+            _userCommunities.value = result
         }
     }
 
     // 🔹 Stop listening when screen closes
     fun removeCommunityListener() {
         repository.removeCommunityListener()
+    }
+
+    // 🔹 Clean up resources when ViewModel is destroyed
+    override fun onCleared() {
+        super.onCleared()
+        removeCommunityListener()
     }
 }
