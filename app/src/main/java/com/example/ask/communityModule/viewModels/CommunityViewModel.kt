@@ -20,38 +20,46 @@ class CommunityViewModel @Inject constructor(
         model: CommunityModels,
         role: String
     ): LiveData<UiState<CommunityModels>> {
-        val successData = MutableLiveData<UiState<CommunityModels>>()
-        successData.value = UiState.Loading
+        val resultLiveData = MutableLiveData<UiState<CommunityModels>>()
+        resultLiveData.value = UiState.Loading
         repository.addCommunity(userId, model, role) { result ->
-            successData.value = result
+            resultLiveData.value = result
         }
-        return successData
+        return resultLiveData
     }
 
-    // 🔹 Get User Communities (Live updates)
+    // 🔹 Join Community
+    fun joinCommunity(
+        userId: String,
+        communityCode: String
+    ): LiveData<UiState<CommunityModels>> {
+        val resultLiveData = MutableLiveData<UiState<CommunityModels>>()
+        resultLiveData.value = UiState.Loading
+        repository.joinCommunity(userId, communityCode) { result ->
+            resultLiveData.value = result
+        }
+        return resultLiveData
+    }
+
+    // 🔹 Get User Communities
     private val _userCommunities = MutableLiveData<UiState<List<CommunityModels>>>()
     val userCommunities: LiveData<UiState<List<CommunityModels>>> get() = _userCommunities
 
     fun getUserCommunities(userId: String) {
         _userCommunities.value = UiState.Loading
-
-        // Create dummy CommunityModels and role for the repository call
-        val dummyModel = CommunityModels()
-        val dummyRole = ""
-
-        repository.getUserCommunity(userId, dummyModel, dummyRole) { result ->
+        repository.getUserCommunity(userId) { result ->
             _userCommunities.value = result
         }
     }
 
-    // 🔹 Stop listening when screen closes
+    // 🔹 Explicit cleanup call for Fragment
     fun removeCommunityListener() {
         repository.removeCommunityListener()
     }
 
-    // 🔹 Clean up resources when ViewModel is destroyed
+    // 🔹 Auto-cleanup when ViewModel dies
     override fun onCleared() {
         super.onCleared()
-        removeCommunityListener()
+        repository.removeCommunityListener()
     }
 }

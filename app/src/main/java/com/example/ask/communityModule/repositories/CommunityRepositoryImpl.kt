@@ -8,27 +8,23 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 
-class CommunityRepositoryImpl(private val firestore: FirebaseFirestore) : CommunityRepository {
+class CommunityRepositoryImpl(
+    private val firestore: FirebaseFirestore
+) : CommunityRepository {
+
     private var communityListener: ListenerRegistration? = null
+
     override fun addCommunity(
         userId: String,
         model: CommunityModels,
         role: String,
         result: (UiState<CommunityModels>) -> Unit
     ) {
-        // 1️⃣ INITIATE PROCESS
-
-        result.invoke(UiState.Loading)
-
-        // 2️⃣ CREATE COMMUNITY DOCUMENT
-
+        result(UiState.Loading)
 
         val communityDocRef = firestore.collection(Constant.COMMUNITIES).document()
         val communityId = communityDocRef.id
         model.communityId = communityId
-
-        // 3️⃣ SAVE COMMUNITY IN GLOBAL COLLECTION
-
 
         communityDocRef.set(model)
             .addOnSuccessListener {
@@ -39,73 +35,81 @@ class CommunityRepositoryImpl(private val firestore: FirebaseFirestore) : Commun
                     userId = userId,
                     communityCode = model.communityCode,
                     joinedAt = System.currentTimeMillis()
-
                 )
-                // 5️⃣ SAVE UNDER USER'S "MY_COMMUNITIES" SUBCOLLECTION
 
                 firestore.collection(Constant.USERS).document(userId)
-                    .collection(Constant.MY_COMMUNITIES).document(communityId).set(userCommunity)
-                    .addOnSuccessListener {
-                        result.invoke(
-                            UiState.Success(model)
-                        )
+                    .collection(Constant.MY_COMMUNITIES)
+                    .document(communityId)
+                    .set(userCommunity)
+                    .addOnSuccessListener { result(UiState.Success(model)) }
+                    .addOnFailureListener { e ->
+                        result(UiState.Failure(e.localizedMessage ?: "Failed to save user community"))
                     }
-                    .addOnFailureListener {
-                        result.invoke(
-                            UiState.Failure(
-                                it.localizedMessage
-                            )
-                        )
-                    }
-
-
             }
-            .addOnFailureListener {
-                result.invoke(
-                    UiState.Failure(
-                        it.localizedMessage
-                    )
-                )
+            .addOnFailureListener { e ->
+                result(UiState.Failure(e.localizedMessage ?: "Failed to create community"))
             }
-
-
     }
 
     override fun getUserCommunity(
         userId: String,
-        models: CommunityModels,
-        role: String,
         result: (UiState<List<CommunityModels>>) -> Unit
     ) {
-        result.invoke(UiState.Loading)
+        result(UiState.Loading)
 
-        val userCommunitiesRef = firestore.collection(Constant.USERS).document(userId).collection(
-            Constant.MY_COMMUNITIES
-        ).orderBy("joinedAt", Query.Direction.DESCENDING)
+        val ref = firestore.collection(Constant.USERS)
+            .document(userId)
+            .collection(Constant.MY_COMMUNITIES)
+            .orderBy("joinedAt", Query.Direction.DESCENDING)
 
-        communityListener = userCommunitiesRef.addSnapshotListener { snapshot, error ->
+        communityListener?.remove()
+        communityListener = ref.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 Log.e("GetUserCommunities", "Firestore error", error)
-                result.invoke(UiState.Failure(error.localizedMessage ?: "unknown error"))
+                result(UiState.Failure(error.localizedMessage ?: "Unknown error"))
                 return@addSnapshotListener
             }
 
-            if (snapshot != null) {
-                try {
-                    val communities = snapshot.toObjects(CommunityModels::class.java)
-                    result.invoke(UiState.Success(communities))
-                    Log.d("GetUserCommunities", "Retrieved ${communities.size} communities")
-
-                }catch (e: Exception){
-                    Log.e("GetUserCommunities", "Error parsing data", e)
-                    result.invoke(UiState.Failure("Parsing error: ${e.localizedMessage}"))
-                }
-            } else {
-                result.invoke(UiState.Success(emptyList()))
-            }
+            val communities = snapshot?.documents?.mapNotNull { it.toObject(CommunityModels::class.java) }
+                ?: emptyList()
+            result(UiState.Success(communities))
         }
-
     }
+
+    override fun joinCommunity(
+        userId: String,
+        communityCode: String,
+        result: (UiState<CommunityModels>) -> Unit
+    ) {
+        result(UiState.Loading)
+
+        firestore.collection(Constant.COMMUNITIES)
+            .whereEqualTo("communityCode", communityCode)
+            .get()
+            .addOnSuccessListener { query ->
+                if (!query.isEmpty) {
+                    val community = query.documents[0].toObject(CommunityModels::class.java)
+                    if (community != null) {
+                        firestore.collection(Constant.USERS).document(userId)
+                            .collection(Constant.MY_COMMUNITIES)
+                            .document(community.communityId ?: "")
+                            .set(community.copy(role = "member", userId = userId, joinedAt = System.currentTimeMillis()))
+                            .addOnSuccessListener { result(UiState.Success(community)) }
+                            .addOnFailureListener { e ->
+                                result(UiState.Failure(e.localizedMessage ?: "Failed to join community"))
+                            }
+                    } else {
+                        result(UiState.Failure("Community not found"))
+                    }
+                } else {
+                    result(UiState.Failure("Invalid community code"))
+                }
+            }
+            .addOnFailureListener { e ->
+                result(UiState.Failure(e.localizedMessage ?: "Error while joining"))
+            }
+    }
+
     override fun removeCommunityListener() {
         communityListener?.remove()
         communityListener = null
