@@ -7,19 +7,17 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Inject
 import javax.inject.Singleton
 
-
-@Module // I'm a recipe book
-@InstallIn(SingletonComponent::class) // For the whole app
+@Module
+@InstallIn(SingletonComponent::class)
 class CommunityModule {
 
-    @Provides // Here's how to cook this
-    @Singleton // Only cook it once
+    @Provides
+    @Singleton
     fun provideCommunityRepository(
-        firestore: FirebaseFirestore // Ingredient
-    ): CommunityRepository { // The dish name
-        return CommunityRepositoryImpl(firestore) // Real dish
+        firestore: FirebaseFirestore
+    ): CommunityRepository {
+        return CommunityRepositoryImpl(firestore)
     }
 }

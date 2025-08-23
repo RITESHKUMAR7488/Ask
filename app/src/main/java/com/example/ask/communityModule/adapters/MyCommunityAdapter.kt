@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.databinding.CommunityItemBinding
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 class MyCommunityAdapter(
@@ -31,11 +33,11 @@ class MyCommunityAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(community: CommunityModels) = with(binding) {
-            tvCommunityName.text = community.communityName
-            tvRole.text = community.role?.uppercase(Locale.getDefault())
+            tvCommunityName.text = community.communityName ?: "Unknown Community"
+            tvRole.text = community.role?.uppercase(Locale.getDefault()) ?: "MEMBER"
             tvJoinedDate.text = formatJoinedDate(community.joinedAt)
 
-            // role-based background
+            // ✅ FIXED: Better null safety in role-based background
             when (community.role?.lowercase(Locale.getDefault())) {
                 "admin" -> tvRole.setBackgroundResource(android.R.color.holo_red_light)
                 "member" -> tvRole.setBackgroundResource(android.R.color.holo_blue_light)
@@ -45,18 +47,23 @@ class MyCommunityAdapter(
             root.setOnClickListener { onCommunityClick(community) }
         }
 
+        // ✅ FIXED: Better date formatting with null safety
         private fun formatJoinedDate(timestamp: Long?): String {
-            if (timestamp == null) return "Unknown"
+            if (timestamp == null || timestamp <= 0) return "Unknown"
 
             val now = System.currentTimeMillis()
             val diff = now - timestamp
 
             return when {
                 diff < 60_000 -> "Just now"
-                diff < 3_600_000 -> "${diff / 60_000} minutes ago"
-                diff < 86_400_000 -> "${diff / 3_600_000} hours ago"
-                diff < 604_800_000 -> "${diff / 86_400_000} days ago"
-                else -> "${diff / 604_800_000} weeks ago"
+                diff < 3_600_000 -> "${(diff / 60_000).toInt()} minutes ago"
+                diff < 86_400_000 -> "${(diff / 3_600_000).toInt()} hours ago"
+                diff < 604_800_000 -> "${(diff / 86_400_000).toInt()} days ago"
+                else -> {
+                    // Show actual date for older entries
+                    val date = Date(timestamp)
+                    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(date)
+                }
             }
         }
     }

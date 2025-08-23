@@ -14,36 +14,30 @@ class CommunityViewModel @Inject constructor(
     private val repository: CommunityRepository
 ) : ViewModel() {
 
-    // 🔹 Add Community
-    fun addCommunity(
-        userId: String,
-        model: CommunityModels,
-        role: String
-    ): LiveData<UiState<CommunityModels>> {
-        val resultLiveData = MutableLiveData<UiState<CommunityModels>>()
-        resultLiveData.value = UiState.Loading
-        repository.addCommunity(userId, model, role) { result ->
-            resultLiveData.value = result
-        }
-        return resultLiveData
-    }
+    // ✅ FIXED: Following OnBoardingViewModel pattern - using private _mutableLiveData and public LiveData
+    private val _addCommunity = MutableLiveData<UiState<CommunityModels>>()
+    val addCommunity: LiveData<UiState<CommunityModels>> = _addCommunity
 
-    // 🔹 Join Community
-    fun joinCommunity(
-        userId: String,
-        communityCode: String
-    ): LiveData<UiState<CommunityModels>> {
-        val resultLiveData = MutableLiveData<UiState<CommunityModels>>()
-        resultLiveData.value = UiState.Loading
-        repository.joinCommunity(userId, communityCode) { result ->
-            resultLiveData.value = result
-        }
-        return resultLiveData
-    }
+    private val _joinCommunity = MutableLiveData<UiState<CommunityModels>>()
+    val joinCommunity: LiveData<UiState<CommunityModels>> = _joinCommunity
 
-    // 🔹 Get User Communities
     private val _userCommunities = MutableLiveData<UiState<List<CommunityModels>>>()
     val userCommunities: LiveData<UiState<List<CommunityModels>>> get() = _userCommunities
+
+    // ✅ FIXED: Following OnBoardingViewModel method signature pattern
+    fun addCommunity(userId: String, model: CommunityModels, role: String) {
+        _addCommunity.value = UiState.Loading
+        repository.addCommunity(userId, model, role) {
+            _addCommunity.value = it
+        }
+    }
+
+    fun joinCommunity(userId: String, communityCode: String) {
+        _joinCommunity.value = UiState.Loading
+        repository.joinCommunity(userId, communityCode) {
+            _joinCommunity.value = it
+        }
+    }
 
     fun getUserCommunities(userId: String) {
         _userCommunities.value = UiState.Loading
@@ -52,12 +46,10 @@ class CommunityViewModel @Inject constructor(
         }
     }
 
-    // 🔹 Explicit cleanup call for Fragment
     fun removeCommunityListener() {
         repository.removeCommunityListener()
     }
 
-    // 🔹 Auto-cleanup when ViewModel dies
     override fun onCleared() {
         super.onCleared()
         repository.removeCommunityListener()

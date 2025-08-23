@@ -18,6 +18,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
         <activity
+            android:name=".communityModule.uis.Activities.JoinCommunity"
+            android:exported="false" />
+        <activity
             android:name=".communityModule.uis.CommunityActivity"
             android:exported="false" />
         <activity
@@ -28,7 +31,7 @@
             android:exported="false" />
         <activity
             android:name=".MainModule.uis.activities.MainScreen"
-            android:exported="true" >
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -37,8 +40,7 @@
         </activity>
         <activity
             android:name=".onBoardingModule.uis.SignInActivity"
-            android:exported="false"/>
-
+            android:exported="false" />
         <activity
             android:name=".onBoardingModule.uis.RegisterActivity"
             android:exported="false" />

@@ -2,6 +2,7 @@ package com.example.ask.communityModule.uis.Activities
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,7 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.lifecycleScope
+import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.viewModels.CommunityViewModel
@@ -19,8 +20,6 @@ import com.example.ask.databinding.DialogCommunityCodeBinding
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import www.sanju.motiontoast.MotionToast
 import java.util.UUID
 
@@ -40,37 +39,58 @@ class CreateCommunityActicity : BaseActivity() {
                 validateAndCreateCommunity()
             }
         }
-
-        // ✅ Collect StateFlow from ViewModel
-        observeCreateCommunityState()
     }
 
+    // ✅ FIXED: Following RegisterActivity validation pattern
     private fun validateAndCreateCommunity() {
         val communityName = binding.etCommunityName.text.toString().trim()
+
         when {
             communityName.isBlank() -> {
                 binding.etCommunityName.error = "Please Enter Community Name"
             }
-
             else -> {
                 val userId = preferenceManager.userId
                 if (userId.isNullOrBlank()) {
                     motionToastUtil.showFailureToast(
                         this,
                         "User is Not Logged in",
-                        duration = MotionToast.Companion.SHORT_DURATION
+                        duration = MotionToast.SHORT_DURATION
                     )
                     return
                 }
 
                 val communityModel = CommunityModels(
-                    communityId = UUID.randomUUID().toString(),
                     communityName = communityName,
                     userId = userId,
                     communityCode = generateCommunityCode()
                 )
-                // ✅ Trigger ViewModel action
+
+                // ✅ FIXED: Following RegisterActivity observer pattern
                 communityViewModel.addCommunity(userId, communityModel, role = "admin")
+                communityViewModel.addCommunity.observe(this) { state ->
+                    when (state) {
+                        is UiState.Loading -> {
+                            binding.progressBar.visibility = View.VISIBLE
+                            binding.btnCreateCommunity.isEnabled = false
+                        }
+                        is UiState.Success -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.btnCreateCommunity.isEnabled = true
+                            showCommunityCodeDialog(state.data)
+                        }
+                        is UiState.Failure -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.btnCreateCommunity.isEnabled = true
+                            motionToastUtil.showFailureToast(
+                                this@CreateCommunityActicity,
+                                state.error,
+                                duration = MotionToast.SHORT_DURATION
+                            )
+                            Log.e("CreateCommunity", "Failed: ${state.error}")
+                        }
+                    }
+                }
             }
         }
     }
@@ -85,39 +105,6 @@ class CreateCommunityActicity : BaseActivity() {
 
         val randomWords = words.shuffled().take(6)
         return randomWords.joinToString("-").uppercase()
-    }
-
-    private fun observeCreateCommunityState() {
-        lifecycleScope.launch {
-            communityViewModel.addCommunityState.collectLatest { state ->
-                Log.d("CreateCommunity", "State: $state")
-                when (state) {
-                    is UiState.Loading -> {
-                        binding.progressBar.visibility = View.VISIBLE
-                        binding.btnCreateCommunity.isEnabled = false
-                    }
-
-                    is UiState.Success -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.btnCreateCommunity.isEnabled = true
-
-                        showCommunityCodeDialog(state.data) // ✅ Now uses ViewModel’s state
-                    }
-
-                    is UiState.Failure -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.btnCreateCommunity.isEnabled = true
-
-                        motionToastUtil.showFailureToast(
-                            this@CreateCommunityActicity,
-                            state.error,
-                            duration = MotionToast.Companion.SHORT_DURATION
-                        )
-                        Log.e("CreateCommunity", "Failed: ${state.error}")
-                    }
-                }
-            }
-        }
     }
 
     private fun showCommunityCodeDialog(communityModel: CommunityModels) {
@@ -165,7 +152,7 @@ class CreateCommunityActicity : BaseActivity() {
         motionToastUtil.showSuccessToast(
             this,
             "Community code copied to clipboard",
-            duration = MotionToast.Companion.SHORT_DURATION
+            duration = MotionToast.SHORT_DURATION
         )
     }
 }
