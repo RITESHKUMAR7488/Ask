@@ -13,6 +13,7 @@
     <color name="status_found">#2196F3</color>
     <color name="status_closed">#9E9E9E</color>
     <color name="status_unknown">#BDBDBD</color>
+    <color name="purple_500">#9C27B0</color>
     <color name="accent_color">#FF5722</color>
     <color name="background_color">#F5F5F5</color>
     <color name="status_default">#9E9E9E</color>

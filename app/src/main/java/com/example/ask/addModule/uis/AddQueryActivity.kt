@@ -16,6 +16,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import com.bumptech.glide.Glide
+import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
@@ -126,7 +127,7 @@ class AddQueryActivity : BaseActivity() {
                     binding.progressBar.visibility = View.GONE
                     binding.btnSubmit.isEnabled = true
                     motionToastUtil.showSuccessToast(this, "Query submitted successfully!")
-                    startActivity(Intent(this, MainActivity::class.java).apply {
+                    startActivity(Intent(this, MainScreen ::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                     })
                     finish()

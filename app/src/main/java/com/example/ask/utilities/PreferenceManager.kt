@@ -9,19 +9,20 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 
 class PreferenceManager @Inject constructor(@ApplicationContext val context: Context) {
-    private var mPreferences:SharedPreferences=context.getSharedPreferences(
+    private var mPreferences: SharedPreferences = context.getSharedPreferences(
         Constant.AUTH,
         AppCompatActivity.MODE_PRIVATE
     )
 
-    private var editor:SharedPreferences.Editor=mPreferences.edit()
+    private var editor: SharedPreferences.Editor = mPreferences.edit()
 
-    var isGmailLoggedIn:Boolean
-        get() =mPreferences.getBoolean(Constant.LOGGED_IN_EMAIL,false)
-        set(loggedIn){
-            editor.putBoolean(Constant.LOGGED_IN,loggedIn)
+    var isGmailLoggedIn: Boolean
+        get() = mPreferences.getBoolean(Constant.LOGGED_IN_EMAIL, false)
+        set(loggedIn) {
+            editor.putBoolean(Constant.LOGGED_IN, loggedIn)
             editor.commit()
         }
+
     var userId: String?
         get() = mPreferences.getString(Constant.AUTH_MODEL, "")
         set(userId) {
@@ -42,6 +43,7 @@ class PreferenceManager @Inject constructor(@ApplicationContext val context: Con
             val json = Gson().toJson(value) // Convert UserModel to JSON
             editor.putString(Constant.USER_MODEL, json).apply()
         }
+
     var isLoggedIn: Boolean
         get() = mPreferences.getBoolean(Constant.LOGGED_IN_EMAIL, false)
         set(emailLogin) {
@@ -49,5 +51,14 @@ class PreferenceManager @Inject constructor(@ApplicationContext val context: Con
             editor.commit() // Save changes immediately
         }
 
+    // Method to clear all user data on logout
+    fun clearUserData() {
+        editor.clear()
+        editor.commit()
+    }
 
+    // Method to check if user session is valid
+    fun isValidSession(): Boolean {
+        return isLoggedIn && userModel != null && !userId.isNullOrEmpty()
+    }
 }

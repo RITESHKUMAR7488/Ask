@@ -3,7 +3,6 @@ package com.example.ask.MainModule.uis.activities
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.example.ask.MainModule.uis.fragments.HomeFragment
@@ -12,15 +11,40 @@ import com.example.ask.addModule.uis.AddQueryActivity
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActicity
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
+import com.example.ask.onBoardingModule.uis.FirstScreen
 import com.example.ask.utilities.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.withContext
+
 @AndroidEntryPoint
 class MainScreen : BaseActivity() {
     private lateinit var binding: ActivityMainScreenBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Check if user is logged in before setting up the main screen
+        if (!isUserLoggedIn()) {
+            redirectToFirstScreen()
+            return
+        }
+
+        // User is logged in, proceed with main screen setup
+        setupMainScreen()
+    }
+
+    private fun isUserLoggedIn(): Boolean {
+        return preferenceManager.isLoggedIn &&
+                preferenceManager.userModel != null &&
+                !preferenceManager.userId.isNullOrEmpty()
+    }
+
+    private fun redirectToFirstScreen() {
+        val intent = Intent(this, FirstScreen::class.java)
+        startActivity(intent)
+        finish() // Close this activity so user can't go back with back button
+    }
+
+    private fun setupMainScreen() {
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main_screen)
 
@@ -47,6 +71,7 @@ class MainScreen : BaseActivity() {
             }
         }
     }
+
     fun updateToolbarTitle(title: String) {
         binding.toolbarTitle.text = title
     }

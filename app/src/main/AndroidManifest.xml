@@ -18,6 +18,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
         <activity
+            android:name=".addModule.uis.ChooseCommunityActivity"
+            android:exported="false" />
+        <activity
+            android:name=".onBoardingModule.uis.SplashScreen"
+            android:exported="false" />
+        <activity
             android:name=".communityModule.uis.Activities.JoinCommunity"
             android:exported="false" />
         <activity
