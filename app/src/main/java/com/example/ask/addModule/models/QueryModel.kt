@@ -18,5 +18,8 @@ data class QueryModel(
     var timestamp: Long? = null,
     var responseCount: Int = 0,
     var tags: List<String>? = null,
-    var priority: String? = "NORMAL" // HIGH, NORMAL, LOW
+    var priority: String? = "NORMAL", // HIGH, NORMAL, LOW
+    // ✅ NEW: Added community fields
+    var communityId: String? = null,
+    var communityName: String? = null
 ) : Parcelable

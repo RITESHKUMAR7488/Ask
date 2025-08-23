@@ -20,6 +20,7 @@ import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.databinding.ActivityAddQueryBinding
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
@@ -34,6 +35,11 @@ class AddQueryActivity : BaseActivity() {
     private var selectedImageUri: Uri? = null
     private var uploadedImageUrl: String? = null
 
+    // ✅ NEW: Community data from intent
+    private var selectedCommunity: CommunityModels? = null
+    private var communityId: String? = null
+    private var communityName: String? = null
+
     private lateinit var imagePickerLauncher: ActivityResultLauncher<Intent>
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
 
@@ -41,11 +47,26 @@ class AddQueryActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_add_query)
 
+        // ✅ NEW: Get community data from intent
+        getCommunityDataFromIntent()
+
         initPermissionLauncher()
         initImagePickerLauncher()
 
         setupUI()
         setupObservers()
+    }
+
+    // ✅ NEW: Extract community data from intent
+    private fun getCommunityDataFromIntent() {
+        selectedCommunity = intent.getParcelableExtra("selected_community")
+        communityId = intent.getStringExtra("community_id")
+        communityName = intent.getStringExtra("community_name")
+
+        // Update UI to show selected community
+        binding.tvSelectedCommunity.text = communityName ?: "No Community Selected"
+        binding.tvSelectedCommunity.visibility = View.VISIBLE
+        binding.layoutCommunityInfo.visibility = View.VISIBLE
     }
 
     // Initialize image picker launcher after binding is set
@@ -74,6 +95,14 @@ class AddQueryActivity : BaseActivity() {
     }
 
     private fun setupUI() {
+        // ✅ NEW: Set toolbar title with community name
+        binding.toolbarTitle.text = "Add Query to $communityName"
+
+        // Back button
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Category dropdown
         val categories = arrayOf("Lost & Found", "Academic Help", "Technical Support", "General Question", "Emergency", "Event", "Other")
         val categoryAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, categories)
@@ -126,8 +155,8 @@ class AddQueryActivity : BaseActivity() {
                 is UiState.Success -> {
                     binding.progressBar.visibility = View.GONE
                     binding.btnSubmit.isEnabled = true
-                    motionToastUtil.showSuccessToast(this, "Query submitted successfully!")
-                    startActivity(Intent(this, MainScreen ::class.java).apply {
+                    motionToastUtil.showSuccessToast(this, "Query submitted successfully to $communityName!")
+                    startActivity(Intent(this, MainScreen::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
                     })
                     finish()
@@ -169,6 +198,10 @@ class AddQueryActivity : BaseActivity() {
         val location = binding.etLocation.text.toString().trim()
 
         when {
+            communityId.isNullOrBlank() -> {
+                motionToastUtil.showFailureToast(this, "No community selected")
+                finish()
+            }
             title.isBlank() -> {
                 binding.etTitle.error = "Please enter a title"
                 binding.etTitle.requestFocus()
@@ -221,7 +254,10 @@ class AddQueryActivity : BaseActivity() {
             location = binding.etLocation.text.toString().trim(),
             imageUrl = uploadedImageUrl,
             priority = binding.spinnerPriority.text.toString(),
-            tags = binding.etTags.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            tags = binding.etTags.text.toString().split(",").map { it.trim() }.filter { it.isNotEmpty() },
+            // ✅ NEW: Add community information to the query
+            communityId = communityId,
+            communityName = communityName
         )
 
         addViewModel.addQuery(queryModel)

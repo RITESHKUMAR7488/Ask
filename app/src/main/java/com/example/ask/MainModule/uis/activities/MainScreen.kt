@@ -7,7 +7,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.example.ask.MainModule.uis.fragments.HomeFragment
 import com.example.ask.R
-import com.example.ask.addModule.uis.AddQueryActivity
+import com.example.ask.addModule.uis.ChooseCommunityActivity
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActicity
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
@@ -55,7 +55,8 @@ class MainScreen : BaseActivity() {
             bottomNavigationView.setOnNavigationItemSelectedListener { item ->
                 when (item.itemId) {
                     R.id.Add -> {
-                        val intent = Intent(this@MainScreen, AddQueryActivity::class.java)
+                        // ✅ UPDATED: Navigate to ChooseCommunityActivity instead of directly to AddQueryActivity
+                        val intent = Intent(this@MainScreen, ChooseCommunityActivity::class.java)
                         startActivity(intent)
                         true
                     }
