@@ -16,10 +16,10 @@ import retrofit2.Response
 import java.io.File
 import javax.inject.Inject
 
-class RepositoryMainImpl @Inject constructor(
+class RepositoryQueryImpl @Inject constructor(
     private val database: FirebaseFirestore,
     private val imageUploadApi: ImageUploadApi
-) : RepositoryMain {
+) : RepositoryQuery {
 
     override fun uploadImage(
         imageFile: File,

@@ -1,8 +1,8 @@
 package com.example.ask.addModule.dis
 
 import com.example.ask.addModule.interfaces.ImageUploadApi
-import com.example.ask.addModule.repositories.RepositoryMain
-import com.example.ask.addModule.repositories.RepositoryMainImpl
+import com.example.ask.addModule.repositories.RepositoryQuery
+import com.example.ask.addModule.repositories.RepositoryQueryImpl
 import com.example.ask.utilities.Constant
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
@@ -36,7 +36,7 @@ class MainModule {
     fun provideRepositoryMain(
         database: FirebaseFirestore,
         imageUploadApi: ImageUploadApi,
-    ): RepositoryMain {
-        return RepositoryMainImpl(database, imageUploadApi)
+    ): RepositoryQuery {
+        return RepositoryQueryImpl(database, imageUploadApi)
     }
 }

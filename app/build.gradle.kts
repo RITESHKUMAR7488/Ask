@@ -68,5 +68,6 @@ dependencies {
     implementation (libs.androidx.swiperefreshlayout)
     implementation(libs.glide)
     implementation(libs.androidx.fragment.ktx)
+    implementation(libs.circleimageview)
 
 }

@@ -6,7 +6,7 @@ import com.example.ask.addModule.models.QueryModel
 import com.example.ask.utilities.UiState
 import java.io.File
 
-interface RepositoryMain {
+interface RepositoryQuery {
     fun uploadImage(
         imageFile: File,
         apiKey: String,

@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.ask.addModule.models.ImageUploadResponse
 import com.example.ask.addModule.models.QueryModel
-import com.example.ask.addModule.repositories.RepositoryMain
+import com.example.ask.addModule.repositories.RepositoryQuery
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddViewModel @Inject constructor(
-    private val repository: RepositoryMain
+    private val repository: RepositoryQuery
 ) : ViewModel() {
 
     private val _imageUpload = MutableLiveData<ImageUploadResponse>()
