@@ -32,10 +32,15 @@
     <color name="teal_200">#80CBC4</color>
     <color name="green_500">#4CAF50</color>
     <color name="red_400">#EF5350</color>
+    <color name="status_progress_color">#FF9800</color> <!-- Orange -->
+    <color name="status_closed_color">#4CAF50</color>   <!-- Green -->
+    <color name="error_color">#F44336</color>
     <color name="info_color">#2196F3</color> <!-- Material Blue -->
     <color name="gray_700">#616161</color>
     <color name="primary_color_light">#E3F2FD</color>
     <color name="secondary_color_light">#F3E5F5</color>
-
-
+    <color name="help_chip_color">#2196F3</color>
+    <color name="update_chip_color">#009688</color>
+    <color name="community_chip_color">#4CAF50</color>
+    <color name="response_chip_color">#F44336</color>
 </resources>

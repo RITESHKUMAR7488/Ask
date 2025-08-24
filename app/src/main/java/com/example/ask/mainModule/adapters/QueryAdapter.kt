@@ -18,8 +18,8 @@ import java.util.*
 class QueryAdapter(
     private val context: Context,
     private val onQueryClick: (QueryModel) -> Unit,
-    private val onHelpClick: (QueryModel) -> Unit, // ✅ NEW: Help button callback
-    private val onChatClick: (QueryModel) -> Unit  // ✅ NEW: Chat button callback
+    private val onHelpClick: (QueryModel) -> Unit, // ✅ Help button callback
+    private val onChatClick: (QueryModel) -> Unit  // ✅ Chat button callback
 ) : ListAdapter<QueryModel, QueryAdapter.QueryViewHolder>(QueryDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): QueryViewHolder {
@@ -101,7 +101,7 @@ class QueryAdapter(
                     tvTags.visibility = View.GONE
                 }
 
-                // ✅ NEW: Setup action buttons
+                // ✅ Setup action buttons
                 setupActionButtons(query)
 
                 // Click listener for the main item
@@ -111,7 +111,7 @@ class QueryAdapter(
             }
         }
 
-        // ✅ NEW: Setup action buttons (Help and Chat)
+        // ✅ Setup action buttons (Help and Chat)
         private fun setupActionButtons(query: QueryModel) {
             with(binding) {
                 // Show action buttons layout
@@ -127,7 +127,7 @@ class QueryAdapter(
                     onChatClick(query)
                 }
 
-                // You can customize button appearance based on query status
+                // Customize button state based on query status
                 when (query.status) {
                     "RESOLVED", "CLOSED" -> {
                         btnHelp.isEnabled = false
@@ -148,12 +148,32 @@ class QueryAdapter(
         private fun setStatusUI(status: String) {
             with(binding) {
                 tvStatus.text = status
-                val (colorRes, textColorRes) = when (status) {
-                    "OPEN" -> R.color.status_open_color to R.color.white
-                    "IN_PROGRESS" -> R.color.status_progress_color to R.color.white
-                    "RESOLVED" -> R.color.success_color to R.color.white
-                    "CLOSED" -> R.color.status_closed_color to R.color.white
-                    else -> R.color.status_default to R.color.white
+
+                // ✅ FIXED: Replaced destructuring assignment with direct assignment
+                val colorRes: Int
+                val textColorRes: Int
+
+                when (status) {
+                    "OPEN" -> {
+                        colorRes = R.color.status_open_color
+                        textColorRes = R.color.white
+                    }
+                    "IN_PROGRESS" -> {
+                        colorRes = R.color.status_progress_color
+                        textColorRes = R.color.white
+                    }
+                    "RESOLVED" -> {
+                        colorRes = R.color.success_color
+                        textColorRes = R.color.white
+                    }
+                    "CLOSED" -> {
+                        colorRes = R.color.status_closed_color
+                        textColorRes = R.color.white
+                    }
+                    else -> {
+                        colorRes = R.color.status_default
+                        textColorRes = R.color.white
+                    }
                 }
 
                 chipStatus.setChipBackgroundColorResource(colorRes)
@@ -164,12 +184,15 @@ class QueryAdapter(
         private fun setPriorityUI(priority: String) {
             with(binding) {
                 chipPriority.text = priority
+
+                // ✅ FIXED: Direct assignment instead of destructuring
                 val colorRes = when (priority) {
                     "HIGH" -> R.color.error_color
                     "NORMAL" -> R.color.primary_color
                     "LOW" -> R.color.gray_500
                     else -> R.color.gray_400
                 }
+
                 chipPriority.setChipBackgroundColorResource(colorRes)
                 chipPriority.setTextColor(ContextCompat.getColor(context, R.color.white))
             }

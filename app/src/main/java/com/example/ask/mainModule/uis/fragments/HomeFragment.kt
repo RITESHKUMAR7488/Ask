@@ -1,5 +1,6 @@
 package com.example.ask.mainModule.uis.fragments
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
+import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.utilities.BaseFragment
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,6 +24,7 @@ class HomeFragment : BaseFragment() {
     private val binding get() = _binding!!
 
     private val addViewModel: AddViewModel by viewModels()
+    private val notificationViewModel: NotificationViewModel by viewModels()
     private lateinit var queryAdapter: QueryAdapter
 
     override fun onCreateView(
@@ -43,9 +46,18 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupRecyclerView() {
-        queryAdapter = QueryAdapter(requireContext()) { query ->
-            onQueryClicked(query)
-        }
+        queryAdapter = QueryAdapter(
+            context = requireContext(),
+            onQueryClick = { query ->
+                onQueryClicked(query)
+            },
+            onHelpClick = { query ->
+                onHelpClicked(query)
+            },
+            onChatClick = { query ->
+                onChatClicked(query)
+            }
+        )
 
         binding.recyclerViewQueries.apply {
             layoutManager = LinearLayoutManager(context)
@@ -106,6 +118,27 @@ class HomeFragment : BaseFragment() {
                 }
             }
         }
+
+        // Observe notification sending result
+        notificationViewModel.addNotification.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    motionToastUtil.showSuccessToast(
+                        requireActivity(),
+                        "Help request sent successfully!"
+                    )
+                }
+                is UiState.Failure -> {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to send help request: ${state.error}"
+                    )
+                }
+                is UiState.Loading -> {
+                    // Show loading if needed
+                }
+            }
+        }
     }
 
     private fun onQueryClicked(query: QueryModel) {
@@ -119,6 +152,49 @@ class HomeFragment : BaseFragment() {
         // Example of how you might navigate to query details:
         // val intent = Intent(requireContext(), QueryDetailsActivity::class.java)
         // intent.putExtra("query_model", query)
+        // startActivity(intent)
+    }
+
+    private fun onHelpClicked(query: QueryModel) {
+        // Send help notification to the query owner
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        if (currentUser != null && !currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty()) {
+            if (currentUserId == query.userId) {
+                motionToastUtil.showWarningToast(
+                    requireActivity(),
+                    "You cannot request help for your own query"
+                )
+                return
+            }
+
+            notificationViewModel.sendHelpNotification(
+                targetUserId = query.userId!!,
+                queryTitle = query.title ?: "Unknown Query",
+                senderName = currentUser.fullName ?: "Unknown User",
+                senderUserId = currentUserId,
+                queryId = query.queryId ?: ""
+            )
+        } else {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Unable to send help request. Please check your login status."
+            )
+        }
+    }
+
+    private fun onChatClicked(query: QueryModel) {
+        // TODO: Navigate to chat activity or open chat
+        motionToastUtil.showInfoToast(
+            requireActivity(),
+            "Chat feature coming soon!"
+        )
+
+        // Example implementation:
+        // val intent = Intent(requireContext(), ChatActivity::class.java)
+        // intent.putExtra("query_id", query.queryId)
+        // intent.putExtra("recipient_id", query.userId)
         // startActivity(intent)
     }
 

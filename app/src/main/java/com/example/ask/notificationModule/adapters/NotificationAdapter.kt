@@ -65,25 +65,25 @@ class NotificationAdapter(
                         ivNotificationIcon.setImageResource(R.drawable.ic_help)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary_color))
                         chipType.text = "Help Request"
-                        chipType.setChipBackgroundColorResource(R.color.help_chip_background)
+                        chipType.setChipBackgroundColorResource(R.color.help_chip_color)
                     }
                     "QUERY_UPDATE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_update)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.success_color))
                         chipType.text = "Query Update"
-                        chipType.setChipBackgroundColorResource(R.color.update_chip_background)
+                        chipType.setChipBackgroundColorResource(R.color.update_chip_color)
                     }
                     "COMMUNITY_INVITE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_group)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.secondary_color))
                         chipType.text = "Community"
-                        chipType.setChipBackgroundColorResource(R.color.community_chip_background)
+                        chipType.setChipBackgroundColorResource(R.color.community_chip_color)
                     }
                     "RESPONSE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_comment)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.info_color))
                         chipType.text = "Response"
-                        chipType.setChipBackgroundColorResource(R.color.response_chip_background)
+                        chipType.setChipBackgroundColorResource(R.color.response_chip_color)
                     }
                     else -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_notification)
