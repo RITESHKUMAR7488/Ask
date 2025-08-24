@@ -5,7 +5,7 @@ import com.example.ask.notificationModule.models.NotificationModel
 object NotificationUtils {
 
     /**
-     * Creates a help request notification
+     * Creates a help request notification with contact details
      */
     fun createHelpRequestNotification(
         targetUserId: String,
@@ -13,12 +13,32 @@ object NotificationUtils {
         queryId: String,
         senderUserId: String,
         senderUserName: String,
+        senderPhoneNumber: String? = null, // ✅ NEW: Added phone number
+        senderEmail: String? = null,       // ✅ NEW: Added email
         senderProfileImage: String? = null
     ): NotificationModel {
+
+        // ✅ NEW: Create contact message
+        val contactInfo = buildString {
+            if (!senderPhoneNumber.isNullOrEmpty()) {
+                append("📞 Phone: $senderPhoneNumber")
+            }
+            if (!senderEmail.isNullOrEmpty()) {
+                if (isNotEmpty()) append(" • ")
+                append("📧 Email: $senderEmail")
+            }
+        }
+
+        val message = if (contactInfo.isNotEmpty()) {
+            "Hi! I can help you with '$queryTitle'. Contact me: $contactInfo"
+        } else {
+            "Hi! I can help you with '$queryTitle'. Let me know if you need assistance!"
+        }
+
         return NotificationModel(
             userId = targetUserId,
-            title = "Help Request",
-            message = "$senderUserName is requesting help with: $queryTitle",
+            title = "🤝 Someone wants to help!",
+            message = message,
             type = "HELP_REQUEST",
             queryId = queryId,
             senderUserId = senderUserId,

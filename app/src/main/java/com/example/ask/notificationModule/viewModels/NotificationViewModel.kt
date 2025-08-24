@@ -27,13 +27,17 @@ class NotificationViewModel @Inject constructor(
     private val _markAsRead = MutableLiveData<UiState<String>>()
     val markAsRead: LiveData<UiState<String>> = _markAsRead
 
-    // Send different types of notifications using utility methods
+    /**
+     * ✅ NEW: Send help notification with contact details
+     */
     fun sendHelpNotification(
         targetUserId: String,
         queryTitle: String,
         queryId: String,
         senderName: String,
         senderUserId: String,
+        senderPhoneNumber: String? = null,
+        senderEmail: String? = null,
         senderProfileImage: String? = null
     ) {
         val notification = NotificationUtils.createHelpRequestNotification(
@@ -42,6 +46,8 @@ class NotificationViewModel @Inject constructor(
             queryId = queryId,
             senderUserId = senderUserId,
             senderUserName = senderName,
+            senderPhoneNumber = senderPhoneNumber,
+            senderEmail = senderEmail,
             senderProfileImage = senderProfileImage
         )
 

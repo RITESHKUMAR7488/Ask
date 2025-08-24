@@ -1,7 +1,7 @@
 package com.example.ask.utilities
 
 import androidx.fragment.app.Fragment
-import jakarta.inject.Inject
+import javax.inject.Inject
 
 
 open class BaseFragment : Fragment(){

@@ -119,13 +119,13 @@ class HomeFragment : BaseFragment() {
             }
         }
 
-        // Observe notification sending result
+        // ✅ UPDATED: Observe notification sending result
         notificationViewModel.addNotification.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is UiState.Success -> {
                     motionToastUtil.showSuccessToast(
                         requireActivity(),
-                        "Help request sent successfully!"
+                        "Help request sent successfully! 🤝"
                     )
                 }
                 is UiState.Failure -> {
@@ -155,8 +155,10 @@ class HomeFragment : BaseFragment() {
         // startActivity(intent)
     }
 
+    /**
+     * ✅ UPDATED: Send help notification with contact details
+     */
     private fun onHelpClicked(query: QueryModel) {
-        // Send help notification to the query owner
         val currentUser = preferenceManager.userModel
         val currentUserId = preferenceManager.userId
 
@@ -169,12 +171,22 @@ class HomeFragment : BaseFragment() {
                 return
             }
 
+            // ✅ NEW: Send help notification with contact details
             notificationViewModel.sendHelpNotification(
                 targetUserId = query.userId!!,
                 queryTitle = query.title ?: "Unknown Query",
+                queryId = query.queryId ?: "",
                 senderName = currentUser.fullName ?: "Unknown User",
                 senderUserId = currentUserId,
-                queryId = query.queryId ?: ""
+                senderPhoneNumber = currentUser.mobileNumber, // Assuming UserModel has phoneNumber
+                senderEmail = currentUser.email,             // Assuming UserModel has email
+                 // Assuming UserModel has profilePicture
+            )
+
+            // Show immediate feedback
+            motionToastUtil.showInfoToast(
+                requireActivity(),
+                "Sending help request to ${query.userName}..."
             )
         } else {
             motionToastUtil.showFailureToast(
