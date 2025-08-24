@@ -17,7 +17,9 @@ import java.util.*
 
 class QueryAdapter(
     private val context: Context,
-    private val onQueryClick: (QueryModel) -> Unit
+    private val onQueryClick: (QueryModel) -> Unit,
+    private val onHelpClick: (QueryModel) -> Unit, // ✅ NEW: Help button callback
+    private val onChatClick: (QueryModel) -> Unit  // ✅ NEW: Chat button callback
 ) : ListAdapter<QueryModel, QueryAdapter.QueryViewHolder>(QueryDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): QueryViewHolder {
@@ -99,9 +101,46 @@ class QueryAdapter(
                     tvTags.visibility = View.GONE
                 }
 
-                // Click listener
+                // ✅ NEW: Setup action buttons
+                setupActionButtons(query)
+
+                // Click listener for the main item
                 root.setOnClickListener {
                     onQueryClick(query)
+                }
+            }
+        }
+
+        // ✅ NEW: Setup action buttons (Help and Chat)
+        private fun setupActionButtons(query: QueryModel) {
+            with(binding) {
+                // Show action buttons layout
+                layoutActionButtons.visibility = View.VISIBLE
+
+                // Help button click listener
+                btnHelp.setOnClickListener {
+                    onHelpClick(query)
+                }
+
+                // Chat button click listener
+                btnChat.setOnClickListener {
+                    onChatClick(query)
+                }
+
+                // You can customize button appearance based on query status
+                when (query.status) {
+                    "RESOLVED", "CLOSED" -> {
+                        btnHelp.isEnabled = false
+                        btnHelp.alpha = 0.5f
+                        btnChat.isEnabled = false
+                        btnChat.alpha = 0.5f
+                    }
+                    else -> {
+                        btnHelp.isEnabled = true
+                        btnHelp.alpha = 1.0f
+                        btnChat.isEnabled = true
+                        btnChat.alpha = 1.0f
+                    }
                 }
             }
         }

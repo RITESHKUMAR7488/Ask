@@ -18,6 +18,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
         <activity
+            android:name=".notificationModule.uis.NotificationActivity"
+            android:exported="false" />
+        <activity
             android:name=".addModule.uis.ChooseCommunityActivity"
             android:exported="false" />
         <activity
