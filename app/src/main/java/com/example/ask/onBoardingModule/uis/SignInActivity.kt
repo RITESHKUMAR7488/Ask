@@ -6,11 +6,8 @@ import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.databinding.DataBindingUtil
-import com.example.ask.MainModule.uis.activities.MainScreen
+import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.databinding.ActivitySignInBinding
 import com.example.ask.onBoardingModule.viewModels.OnBoardingViewModel

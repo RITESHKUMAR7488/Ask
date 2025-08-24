@@ -6,8 +6,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import com.example.ask.MainModule.uis.activities.MainScreen
+import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.utilities.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint

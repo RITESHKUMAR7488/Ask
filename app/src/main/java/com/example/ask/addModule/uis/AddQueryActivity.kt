@@ -16,7 +16,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import com.bumptech.glide.Glide
-import com.example.ask.MainModule.uis.activities.MainScreen
+import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel

@@ -1,16 +1,17 @@
-package com.example.ask.MainModule.uis.activities
+package com.example.ask.mainModule.uis.activities
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
-import com.example.ask.MainModule.uis.fragments.HomeFragment
+
+
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
-import com.example.ask.communityModule.uis.Activities.CreateCommunityActicity
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
+import com.example.ask.mainModule.uis.fragments.HomeFragment
 import com.example.ask.onBoardingModule.uis.FirstScreen
 import com.example.ask.utilities.BaseActivity
 import dagger.hilt.android.AndroidEntryPoint

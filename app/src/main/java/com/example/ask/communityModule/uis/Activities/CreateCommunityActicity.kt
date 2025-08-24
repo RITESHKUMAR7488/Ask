@@ -2,7 +2,6 @@ package com.example.ask.communityModule.uis.Activities
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -11,7 +10,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.databinding.DataBindingUtil
-import com.example.ask.MainModule.uis.activities.MainScreen
 import com.example.ask.R
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.viewModels.CommunityViewModel
@@ -21,7 +19,6 @@ import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import www.sanju.motiontoast.MotionToast
-import java.util.UUID
 
 @AndroidEntryPoint
 class CreateCommunityActicity : BaseActivity() {
