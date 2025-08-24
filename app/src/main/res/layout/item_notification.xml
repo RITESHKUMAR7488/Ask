@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout>
-    <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
+<layout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
@@ -97,18 +97,19 @@
                     tools:text="Help Request" />
 
                 <!-- Notification message -->
+
+                <!-- Sender info -->
                 <TextView
                     android:id="@+id/tvMessage"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:maxLines="2"
                     android:ellipsize="end"
+                    android:maxLines="3"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
-                    tools:text="John Doe is requesting help with: Android Development Issue - Need assistance with RecyclerView implementation" />
+                    tools:text="John Doe is requesting help with: Android Development Issue - Need assistance with RecyclerView implementationbbgbhhh" />
 
-                <!-- Sender info -->
                 <LinearLayout
                     android:id="@+id/layoutSenderInfo"
                     android:layout_width="wrap_content"
