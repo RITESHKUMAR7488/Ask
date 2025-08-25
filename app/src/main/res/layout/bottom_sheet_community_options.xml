@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="@drawable/bottom_sheet_background">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Community Options"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Create Community Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateCommunity"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Create Community"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/primary_color"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="16dp"
+            app:cornerRadius="8dp"
+            app:iconGravity="start"
+            app:iconTint="@android:color/white" />
+
+        <!-- Join Community Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnJoinCommunity"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Join Community"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/secondary_color"
+            android:textColor="@android:color/white"
+            app:cornerRadius="8dp"
+            app:iconGravity="start"
+            app:iconTint="@android:color/white" />
+
+    </LinearLayout>
+</layout>

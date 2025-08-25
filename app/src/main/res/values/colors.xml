@@ -2,4 +2,52 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="primary_color">#6366F1</color>
+    <color name="primary_dark">#4F46E5</color>
+    <color name="secondary_color">#4CAF50</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_tertiary">#BDBDBD</color>
+    <color name="status_active">#4CAF50</color>
+    <color name="status_found">#2196F3</color>
+    <color name="status_closed">#9E9E9E</color>
+    <color name="status_unknown">#BDBDBD</color>
+    <color name="primary_light">#E3F2FD</color>
+    <color name="success_green">#4CAF50</color>
+    <color name="purple_500">#9C27B0</color>
+    <color name="accent_color">#FF5722</color>
+    <color name="background_color">#F5F5F5</color>
+    <color name="status_default">#9E9E9E</color>
+    <color name="lighter_gray">#E0E0E0</color>
+    <color name="gray_100">#F5F5F5</color>
+    <color name="gray_200">#EEEEEE</color>
+    <color name="gray_300">#D1D5DB</color>
+    <color name="gray_400">#BDBDBD</color>
+    <color name="gray_500">#6B7280</color>
+    <color name="gray_600">#4B5563</color>
+    <color name="gray_700">#616161</color>
+    <color name="status_open_color">#4CAF50</color>
+    <color name="success_color">#059669</color>
+    <color name="chip_background">#E8F5E8</color>
+    <color name="purple_200">#CE93D8</color>
+    <color name="teal_200">#80CBC4</color>
+    <color name="green_500">#4CAF50</color>
+    <color name="red_400">#EF5350</color>
+    <color name="status_progress_color">#FF9800</color> <!-- Orange -->
+    <color name="status_closed_color">#4CAF50</color>   <!-- Green -->
+    <color name="error_color">#F44336</color>
+    <color name="info_color">#2196F3</color> <!-- Material Blue -->
+    <color name="primary_color_light">#E3F2FD</color>
+    <color name="secondary_color_light">#F3E5F5</color>
+    <color name="help_chip_color">#2196F3</color>
+    <color name="update_chip_color">#009688</color>
+    <color name="community_chip_color">#4CAF50</color>
+    <color name="response_chip_color">#F44336</color>
+    <color name="nav_selected">#1976D2</color>
+    <color name="nav_unselected">#757575</color>
+    <color name="colorAccent">#FF5722</color> <!-- Uses your accent_color -->
+
+    <!-- Navigation specific colors (if you want different styling) -->
+    <color name="nav_header_text">#FFFFFF</color>
+    <color name="nav_item_selected">#E3F2FD</color>
 </resources>
