@@ -2,6 +2,7 @@ package com.example.ask.mainModule.uis.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -22,9 +23,11 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainScreen : BaseActivity() {
     private lateinit var binding: ActivityMainScreenBinding
-
-    // ✅ NEW: Add NotificationViewModel
     private val notificationViewModel: NotificationViewModel by viewModels()
+
+    companion object {
+        private const val TAG = "MainScreen"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,13 +58,13 @@ class MainScreen : BaseActivity() {
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main_screen)
 
-        // ✅ NEW: Setup notification bell (using your existing btnNotification)
+        // Setup notification bell
         setupNotificationBell()
 
-        // ✅ NEW: Observe notification count
+        // Observe notification count
         observeNotifications()
 
-        // ✅ NEW: Setup back button functionality
+        // Setup back button functionality
         setupBackButton()
 
         // Default fragment = Home
@@ -71,7 +74,6 @@ class MainScreen : BaseActivity() {
             bottomNavigationView.setOnNavigationItemSelectedListener { item ->
                 when (item.itemId) {
                     R.id.Add -> {
-                        // ✅ UPDATED: Navigate to ChooseCommunityActivity instead of directly to AddQueryActivity
                         val intent = Intent(this@MainScreen, ChooseCommunityActivity::class.java)
                         startActivity(intent)
                         true
@@ -90,7 +92,7 @@ class MainScreen : BaseActivity() {
     }
 
     /**
-     * ✅ NEW: Setup notification bell click listener (using your existing btnNotification)
+     * Setup notification bell click listener
      */
     private fun setupNotificationBell() {
         binding.btnNotification.setOnClickListener {
@@ -104,7 +106,7 @@ class MainScreen : BaseActivity() {
     }
 
     /**
-     * ✅ NEW: Setup back button functionality
+     * Setup back button functionality
      */
     private fun setupBackButton() {
         binding.btnBack.setOnClickListener {
@@ -113,44 +115,80 @@ class MainScreen : BaseActivity() {
     }
 
     /**
-     * ✅ NEW: Observe notifications and update badge (using your existing notificationBadge)
+     * Observe notifications and update badge
      */
     private fun observeNotifications() {
         val userId = preferenceManager.userId
+        Log.d(TAG, "observeNotifications: userId = $userId")
+
         if (!userId.isNullOrEmpty()) {
             // Load unread notification count
             notificationViewModel.getUnreadNotificationCount(userId)
 
             // Observe unread count
             notificationViewModel.unreadCount.observe(this) { state ->
+                Log.d(TAG, "Notification state received: $state")
                 when (state) {
                     is UiState.Success -> {
+                        Log.d(TAG, "Unread notification count: ${state.data}")
                         updateNotificationBadge(state.data)
                     }
                     is UiState.Failure -> {
+                        Log.e(TAG, "Failed to get unread count: ${state.error}")
                         // Hide badge on error
                         updateNotificationBadge(0)
                     }
                     is UiState.Loading -> {
+                        Log.d(TAG, "Loading notification count...")
                         // Keep current state while loading
                     }
                 }
             }
+        } else {
+            Log.w(TAG, "UserId is null or empty, cannot observe notifications")
         }
     }
 
     /**
-     * ✅ NEW: Update notification badge count (using your existing notificationBadge)
+     * Update notification badge count with improved visibility
      */
     private fun updateNotificationBadge(count: Int) {
+        Log.d(TAG, "updateNotificationBadge called with count: $count")
+
         with(binding) {
             if (count > 0) {
+                Log.d(TAG, "Showing badge with count: $count")
                 notificationBadge.visibility = View.VISIBLE
                 notificationBadge.text = if (count > 99) "99+" else count.toString()
+
+                // Force visibility and bring to front
+                notificationBadge.bringToFront()
+
+                // Test with a temporary toast to confirm the method is being called
+                motionToastUtil.showInfoToast(this@MainScreen, "Badge updated: $count notifications")
+
             } else {
+                Log.d(TAG, "Hiding badge (count is 0)")
                 notificationBadge.visibility = View.GONE
             }
         }
+
+        // Force layout refresh
+        binding.notificationContainer.invalidate()
+        binding.notificationContainer.requestLayout()
+    }
+
+    /**
+     * Test method to manually trigger badge update - you can call this for testing
+     */
+    fun testNotificationBadge() {
+        Log.d(TAG, "Testing notification badge...")
+        updateNotificationBadge(5) // Test with 5 notifications
+
+        // Also test hiding after 3 seconds
+        binding.notificationBadge.postDelayed({
+            updateNotificationBadge(0)
+        }, 3000)
     }
 
     fun updateToolbarTitle(title: String) {
@@ -163,21 +201,29 @@ class MainScreen : BaseActivity() {
         fragmentTransaction.addToBackStack(null)
         fragmentTransaction.commit()
 
-        // 🔑 Update toolbar title dynamically
+        // Update toolbar title dynamically
         binding.toolbarTitle.text = title
     }
 
     override fun onResume() {
         super.onResume()
-        // ✅ NEW: Refresh notification count when activity resumes
+        Log.d(TAG, "onResume called")
+
+        // Refresh notification count when activity resumes
         val userId = preferenceManager.userId
         if (!userId.isNullOrEmpty()) {
+            Log.d(TAG, "Refreshing notification count for user: $userId")
             notificationViewModel.getUnreadNotificationCount(userId)
         }
+
+        // TEMPORARY: Test badge functionality
+        // Remove this line once you confirm it's working
+        // testNotificationBadge()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG, "onDestroy called")
         notificationViewModel.removeNotificationListener()
     }
 }
