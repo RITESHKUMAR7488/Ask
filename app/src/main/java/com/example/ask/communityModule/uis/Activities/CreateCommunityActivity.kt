@@ -21,7 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import www.sanju.motiontoast.MotionToast
 
 @AndroidEntryPoint
-class CreateCommunityActicity : BaseActivity() {
+class CreateCommunityActivity : BaseActivity() {
 
     private lateinit var binding: ActivityCreateCommunityActicityBinding
     private val communityViewModel: CommunityViewModel by viewModels()
@@ -80,7 +80,7 @@ class CreateCommunityActicity : BaseActivity() {
                             binding.progressBar.visibility = View.GONE
                             binding.btnCreateCommunity.isEnabled = true
                             motionToastUtil.showFailureToast(
-                                this@CreateCommunityActicity,
+                                this@CreateCommunityActivity,
                                 state.error,
                                 duration = MotionToast.SHORT_DURATION
                             )

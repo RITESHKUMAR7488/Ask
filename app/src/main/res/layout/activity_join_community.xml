@@ -6,7 +6,7 @@
         android:id="@+id/main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".communityModule.uis.Activities.CreateCommunityActicity">
+        tools:context=".communityModule.uis.Activities.CreateCommunityActivity">
 
         <TextView
             android:id="@+id/textView4"

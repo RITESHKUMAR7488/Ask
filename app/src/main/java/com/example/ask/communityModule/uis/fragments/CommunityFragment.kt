@@ -12,7 +12,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.communityModule.adapters.MyCommunityAdapter
 import com.example.ask.communityModule.models.CommunityModels
-import com.example.ask.communityModule.uis.Activities.CreateCommunityActicity
+import com.example.ask.communityModule.uis.Activities.CreateCommunityActivity
 import com.example.ask.communityModule.uis.Activities.JoinCommunity
 import com.example.ask.communityModule.uis.CommunityActivity
 import com.example.ask.communityModule.viewModels.CommunityViewModel
@@ -81,7 +81,7 @@ class CommunityFragment : BaseFragment() {
         // Handle Create Community button click
         bottomSheetView.findViewById<View>(R.id.btnCreateCommunity).setOnClickListener {
             bottomSheetDialog.dismiss()
-            startActivity(Intent(requireContext(), CreateCommunityActicity::class.java))
+            startActivity(Intent(requireContext(), CreateCommunityActivity::class.java))
         }
 
         // Handle Join Community button click

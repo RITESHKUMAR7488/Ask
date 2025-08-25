@@ -33,7 +33,7 @@
             android:name=".communityModule.uis.CommunityActivity"
             android:exported="false" />
         <activity
-            android:name=".communityModule.uis.Activities.CreateCommunityActicity"
+            android:name=".communityModule.uis.Activities.CreateCommunityActivity"
             android:exported="false" />
         <activity
             android:name=".addModule.uis.AddQueryActivity"
