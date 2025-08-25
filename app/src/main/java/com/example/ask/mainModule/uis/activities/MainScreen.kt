@@ -3,11 +3,18 @@ package com.example.ask.mainModule.uis.activities
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import com.bumptech.glide.Glide
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
@@ -18,12 +25,14 @@ import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
+import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainScreen : BaseActivity() {
+class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var binding: ActivityMainScreenBinding
     private val notificationViewModel: NotificationViewModel by viewModels()
+    private lateinit var toggle: ActionBarDrawerToggle
 
     companion object {
         private const val TAG = "MainScreen"
@@ -58,14 +67,23 @@ class MainScreen : BaseActivity() {
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main_screen)
 
+        // Setup navigation drawer
+        setupNavigationDrawer()
+
+        // Setup navigation header
+        setupNavigationHeader()
+
+        // Setup back press handling
+        setupBackPressHandling()
+
         // Setup notification bell
         setupNotificationBell()
 
         // Observe notification count
         observeNotifications()
 
-        // Setup back button functionality
-        setupBackButton()
+        // Setup menu button functionality
+        setupMenuButton()
 
         // Default fragment = Home
         replaceFragment(HomeFragment(), "Queries")
@@ -92,6 +110,122 @@ class MainScreen : BaseActivity() {
     }
 
     /**
+     * Setup back press handling using OnBackPressedDispatcher
+     */
+    private fun setupBackPressHandling() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
+                } else {
+                    // Let the system handle the back press (finish activity, etc.)
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
+    }
+
+    /**
+     * Setup navigation drawer
+     */
+    private fun setupNavigationDrawer() {
+        toggle = ActionBarDrawerToggle(
+            this,
+            binding.drawerLayout,
+            R.string.navigation_drawer_open,
+            R.string.navigation_drawer_close
+        )
+
+        binding.drawerLayout.addDrawerListener(toggle)
+        binding.navigationView.setNavigationItemSelectedListener(this)
+
+        // Fix spacing issue for specific devices
+        fixNavigationViewSpacing()
+    }
+
+    /**
+     * Fix navigation view spacing programmatically for device-specific issues
+     */
+    private fun fixNavigationViewSpacing() {
+        try {
+            // Force remove any system-added margins/padding
+            binding.navigationView.setPadding(0, 0, 0, 0)
+
+            // Get the NavigationMenuView (internal view that holds menu items)
+            val navigationMenuView = binding.navigationView.getChildAt(0) as? android.widget.ListView
+            navigationMenuView?.let { menuView ->
+                menuView.setPadding(0, 0, 0, 0)
+
+                // Set divider height to 0 if needed
+                menuView.dividerHeight = 0
+
+                // Force layout update
+                menuView.requestLayout()
+            }
+
+            // Alternative approach - find RecyclerView if NavigationView uses it
+            val recyclerView = findRecyclerViewInNavigationView(binding.navigationView)
+            recyclerView?.let { rv ->
+                rv.setPadding(0, 0, 0, 0)
+                rv.requestLayout()
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fixing navigation spacing: ${e.message}")
+        }
+    }
+
+    /**
+     * Helper method to find RecyclerView in NavigationView
+     */
+    private fun findRecyclerViewInNavigationView(view: View): androidx.recyclerview.widget.RecyclerView? {
+        if (view is androidx.recyclerview.widget.RecyclerView) {
+            return view
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = findRecyclerViewInNavigationView(view.getChildAt(i))
+                if (child != null) return child
+            }
+        }
+        return null
+    }
+
+    /**
+     * Setup navigation header with user info
+     */
+    private fun setupNavigationHeader() {
+        val headerView = binding.navigationView.getHeaderView(0)
+        val ivProfileImage = headerView.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileImage)
+        val tvUserName = headerView.findViewById<TextView>(R.id.tvUserName)
+        val tvUserEmail = headerView.findViewById<TextView>(R.id.tvUserEmail)
+
+        // Load user data from preferences
+        val userModel = preferenceManager.userModel
+        userModel?.let { user ->
+            // Set user name
+            tvUserName.text = user.fullName ?: "User Name"
+
+            // Set user email
+            tvUserEmail.text = user.email ?: "user@example.com"
+
+            // Load profile image
+            if (!user.imageUrl.isNullOrEmpty()) {
+                Glide.with(this)
+                    .load(user.imageUrl)
+                    .placeholder(R.drawable.ic_person)
+                    .error(R.drawable.ic_person)
+                    .circleCrop()
+                    .into(ivProfileImage)
+            } else {
+                ivProfileImage.setImageResource(R.drawable.ic_person)
+            }
+        }
+    }
+
+    /**
      * Setup notification bell click listener
      */
     private fun setupNotificationBell() {
@@ -106,12 +240,92 @@ class MainScreen : BaseActivity() {
     }
 
     /**
-     * Setup back button functionality
+     * Setup menu button functionality
      */
-    private fun setupBackButton() {
-        binding.btnBack.setOnClickListener {
-            onBackPressed()
+    private fun setupMenuButton() {
+        binding.btnMenu.setOnClickListener {
+            if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+            } else {
+                binding.drawerLayout.openDrawer(GravityCompat.START)
+            }
         }
+    }
+
+    /**
+     * Handle navigation drawer item selection
+     */
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_home -> {
+                replaceFragment(HomeFragment(), "Queries")
+                // Update bottom navigation selection
+                binding.bottomNavigationView.selectedItemId = R.id.home
+            }
+            R.id.nav_my_queries -> {
+                // TODO: Navigate to My Queries fragment/activity
+                motionToastUtil.showInfoToast(this, "My Queries - Coming Soon!")
+            }
+            R.id.nav_communities -> {
+                replaceFragment(CommunityFragment(), "Communities")
+                // Update bottom navigation selection
+                binding.bottomNavigationView.selectedItemId = R.id.community
+            }
+            R.id.nav_notifications -> {
+                val intent = Intent(this, NotificationActivity::class.java)
+                startActivity(intent)
+            }
+            R.id.nav_profile -> {
+                // TODO: Navigate to Profile activity
+                motionToastUtil.showInfoToast(this, "Profile - Coming Soon!")
+            }
+            R.id.nav_settings -> {
+                // TODO: Navigate to Settings activity
+                motionToastUtil.showInfoToast(this, "Settings - Coming Soon!")
+            }
+            R.id.nav_about -> {
+                // TODO: Show About dialog/activity
+                motionToastUtil.showInfoToast(this, "About - Coming Soon!")
+            }
+            R.id.nav_logout -> {
+                showLogoutConfirmation()
+            }
+        }
+
+        // Close drawer after selection
+        binding.drawerLayout.closeDrawer(GravityCompat.START)
+        return true
+    }
+
+    /**
+     * Show logout confirmation dialog
+     */
+    private fun showLogoutConfirmation() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Yes") { _, _ ->
+                performLogout()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /**
+     * Perform logout operation
+     */
+    private fun performLogout() {
+        // Clear user data from preferences
+        preferenceManager.clearUserData()
+
+        // Show success message
+        motionToastUtil.showSuccessToast(this, "Logged out successfully")
+
+        // Navigate to FirstScreen
+        val intent = Intent(this, FirstScreen::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     /**
@@ -164,9 +378,6 @@ class MainScreen : BaseActivity() {
                 // Force visibility and bring to front
                 notificationBadge.bringToFront()
 
-                // Test with a temporary toast to confirm the method is being called
-                motionToastUtil.showInfoToast(this@MainScreen, "Badge updated: $count notifications")
-
             } else {
                 Log.d(TAG, "Hiding badge (count is 0)")
                 notificationBadge.visibility = View.GONE
@@ -176,19 +387,6 @@ class MainScreen : BaseActivity() {
         // Force layout refresh
         binding.notificationContainer.invalidate()
         binding.notificationContainer.requestLayout()
-    }
-
-    /**
-     * Test method to manually trigger badge update - you can call this for testing
-     */
-    fun testNotificationBadge() {
-        Log.d(TAG, "Testing notification badge...")
-        updateNotificationBadge(5) // Test with 5 notifications
-
-        // Also test hiding after 3 seconds
-        binding.notificationBadge.postDelayed({
-            updateNotificationBadge(0)
-        }, 3000)
     }
 
     fun updateToolbarTitle(title: String) {
@@ -216,9 +414,8 @@ class MainScreen : BaseActivity() {
             notificationViewModel.getUnreadNotificationCount(userId)
         }
 
-        // TEMPORARY: Test badge functionality
-        // Remove this line once you confirm it's working
-        // testNotificationBadge()
+        // Refresh navigation header in case user data changed
+        setupNavigationHeader()
     }
 
     override fun onDestroy() {
