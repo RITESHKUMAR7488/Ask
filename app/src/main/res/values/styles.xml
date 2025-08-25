@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Your existing app theme (if any) -->
+    <!-- Add the NavigationView style -->
+    <style name="NavigationViewStyle" parent="Widget.Design.NavigationView">
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:layout_marginLeft">0dp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
+        <item name="itemHorizontalPadding">16dp</item>
+        <item name="itemIconPadding">32dp</item>
+        <item name="itemVerticalPadding">12dp</item>
+        <item name="itemMaxLines">1</item>
+    </style>
+</resources>
