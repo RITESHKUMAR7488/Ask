@@ -1,5 +1,6 @@
 package com.example.ask.addModule.repositories
 
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.example.ask.addModule.interfaces.ImageUploadApi
 import com.example.ask.addModule.models.ImageUploadResponse
@@ -20,6 +21,10 @@ class RepositoryQueryImpl @Inject constructor(
     private val database: FirebaseFirestore,
     private val imageUploadApi: ImageUploadApi
 ) : RepositoryQuery {
+
+    companion object {
+        private const val TAG = "RepositoryQueryImpl"
+    }
 
     override fun uploadImage(
         imageFile: File,
@@ -46,83 +51,176 @@ class RepositoryQueryImpl @Inject constructor(
     }
 
     override fun addQuery(queryModel: QueryModel, result: (UiState<String>) -> Unit) {
+        Log.d(TAG, "addQuery: Starting with communityId=${queryModel.communityId}, communityName=${queryModel.communityName}")
+
         val queryId = database.collection(Constant.POSTS).document().id
         queryModel.queryId = queryId
         queryModel.timestamp = System.currentTimeMillis()
+
+        // ✅ VALIDATION: Ensure communityId is present before saving
+        if (queryModel.communityId.isNullOrBlank()) {
+            Log.e(TAG, "addQuery: Query rejected - no communityId")
+            result.invoke(UiState.Failure("Query must be associated with a community"))
+            return
+        }
 
         database.collection(Constant.POSTS)
             .document(queryId)
             .set(queryModel)
             .addOnSuccessListener {
-                result.invoke(UiState.Success("Query added successfully"))
+                Log.d(TAG, "addQuery: Successfully added query $queryId to community ${queryModel.communityName}")
+                result.invoke(UiState.Success("Query added successfully to ${queryModel.communityName}"))
             }
             .addOnFailureListener { exception ->
+                Log.e(TAG, "addQuery: Failed to add query", exception)
                 result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to add query"))
             }
     }
 
     override fun getUserQueries(userId: String, result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "getUserQueries: Starting for userId=$userId")
+
         database.collection(Constant.POSTS)
             .whereEqualTo("userId", userId)
             .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { documents ->
                 val queries = documents.toObjects(QueryModel::class.java)
+                Log.d(TAG, "getUserQueries: Found ${queries.size} queries for user $userId")
                 result.invoke(UiState.Success(queries))
             }
             .addOnFailureListener { exception ->
+                Log.e(TAG, "getUserQueries: Failed", exception)
                 result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch queries"))
             }
     }
 
     override fun getAllQueries(result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "getAllQueries: Starting")
+
         database.collection(Constant.POSTS)
             .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { documents ->
                 val queries = documents.toObjects(QueryModel::class.java)
+                Log.d(TAG, "getAllQueries: Found ${queries.size} total queries")
                 result.invoke(UiState.Success(queries))
             }
             .addOnFailureListener { exception ->
+                Log.e(TAG, "getAllQueries: Failed", exception)
                 result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch queries"))
             }
     }
 
-    // ✅ NEW: Get queries only from communities the user has joined
+    // ✅ ENHANCED with detailed logging
     override fun getQueriesFromUserCommunities(userId: String, result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "getQueriesFromUserCommunities: Starting for userId=$userId")
+        Log.d(TAG, "getQueriesFromUserCommunities: Looking in collection path: ${Constant.USERS}/$userId/${Constant.MY_COMMUNITIES}")
+
         // First, get the user's joined communities
         database.collection(Constant.USERS)
             .document(userId)
             .collection(Constant.MY_COMMUNITIES)
             .get()
             .addOnSuccessListener { communityDocs ->
+                Log.d(TAG, "getQueriesFromUserCommunities: Found ${communityDocs.size()} community documents")
+
+                // Log each community document
+                communityDocs.documents.forEachIndexed { index, doc ->
+                    Log.d(TAG, "getQueriesFromUserCommunities: Community $index - ID: ${doc.id}, Data: ${doc.data}")
+                }
+
                 // Extract community IDs from user's joined communities
                 val communityIds = communityDocs.documents.mapNotNull { doc ->
-                    doc.getString("communityId")
+                    val communityId = doc.getString("communityId")
+                    Log.d(TAG, "getQueriesFromUserCommunities: Extracted communityId: $communityId from document ${doc.id}")
+                    communityId
                 }.filter { it.isNotEmpty() }
 
+                Log.d(TAG, "getQueriesFromUserCommunities: Final community IDs: $communityIds")
+
                 if (communityIds.isEmpty()) {
-                    // User hasn't joined any communities
+                    Log.d(TAG, "getQueriesFromUserCommunities: User hasn't joined any communities")
                     result.invoke(UiState.Success(emptyList()))
                     return@addOnSuccessListener
                 }
 
                 // Now get queries from these communities
-                database.collection(Constant.POSTS)
-                    .whereIn("communityId", communityIds)
-                    .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                    .get()
-                    .addOnSuccessListener { queryDocs ->
-                        val queries = queryDocs.toObjects(QueryModel::class.java)
-                        result.invoke(UiState.Success(queries))
-                    }
-                    .addOnFailureListener { exception ->
-                        result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
-                    }
+                Log.d(TAG, "getQueriesFromUserCommunities: Fetching queries from ${communityIds.size} communities")
+                fetchQueriesFromCommunities(communityIds, result)
             }
             .addOnFailureListener { exception ->
+                Log.e(TAG, "getQueriesFromUserCommunities: Failed to fetch user communities", exception)
                 result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch user communities"))
             }
+    }
+
+    // ✅ Enhanced with logging
+    private fun fetchQueriesFromCommunities(communityIds: List<String>, result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "fetchQueriesFromCommunities: Searching for queries with communityIds: $communityIds")
+
+        database.collection(Constant.POSTS)
+            .whereIn("communityId", communityIds)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { queryDocs ->
+                Log.d(TAG, "fetchQueriesFromCommunities: Found ${queryDocs.size()} query documents")
+
+                val queries = queryDocs.toObjects(QueryModel::class.java)
+                Log.d(TAG, "fetchQueriesFromCommunities: Converted to ${queries.size} QueryModel objects")
+
+                // Log each query for debugging
+                queries.forEachIndexed { index, query ->
+                    Log.d(TAG, "fetchQueriesFromCommunities: Query $index - ID: ${query.queryId}, Title: ${query.title}, CommunityId: ${query.communityId}, CommunityName: ${query.communityName}")
+                }
+
+                val filteredQueries = queries.filter { !it.communityId.isNullOrBlank() }
+                Log.d(TAG, "fetchQueriesFromCommunities: After filtering: ${filteredQueries.size} queries")
+
+                result.invoke(UiState.Success(filteredQueries))
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "fetchQueriesFromCommunities: Failed to fetch queries", exception)
+                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
+            }
+    }
+
+    private fun fetchQueriesInChunks(communityIds: List<String>, result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "fetchQueriesInChunks: Handling ${communityIds.size} communities in chunks")
+
+        val allQueries = mutableListOf<QueryModel>()
+        val chunks = communityIds.chunked(10)
+        var completedChunks = 0
+
+        Log.d(TAG, "fetchQueriesInChunks: Split into ${chunks.size} chunks")
+
+        chunks.forEach { chunk ->
+            database.collection(Constant.POSTS)
+                .whereIn("communityId", chunk)
+                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener { queryDocs ->
+                    val queries = queryDocs.toObjects(QueryModel::class.java)
+                        .filter { !it.communityId.isNullOrBlank() }
+
+                    synchronized(allQueries) {
+                        allQueries.addAll(queries)
+                        completedChunks++
+
+                        Log.d(TAG, "fetchQueriesInChunks: Completed chunk $completedChunks/${chunks.size}, found ${queries.size} queries")
+
+                        if (completedChunks == chunks.size) {
+                            val sortedQueries = allQueries.sortedByDescending { it.timestamp ?: 0 }
+                            Log.d(TAG, "fetchQueriesInChunks: All chunks completed, returning ${sortedQueries.size} total queries")
+                            result.invoke(UiState.Success(sortedQueries))
+                        }
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    Log.e(TAG, "fetchQueriesInChunks: Failed on chunk", exception)
+                    result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
+                }
+        }
     }
 
     override fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit) {

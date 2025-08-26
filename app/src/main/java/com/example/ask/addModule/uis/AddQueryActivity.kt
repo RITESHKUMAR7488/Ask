@@ -23,6 +23,7 @@ import com.example.ask.addModule.viewModels.AddViewModel
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.databinding.ActivityAddQueryBinding
 import com.example.ask.utilities.BaseActivity
+import com.example.ask.utilities.Constant
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
@@ -233,8 +234,8 @@ class AddQueryActivity : BaseActivity() {
                     inputStream?.copyTo(outputStream)
                 }
 
-                val apiKey = "6d207e02198a847aa98d0a2a901485a5" // Use actual API key
-                addViewModel.uploadImage(file, apiKey)
+                // ✅ FIXED: Using the correct API key constant from your Constant object
+                addViewModel.uploadImage(file, Constant.IMAGE_API_KEY)
 
             } catch (e: Exception) {
                 motionToastUtil.showFailureToast(this, "Failed to process image: ${e.localizedMessage}")
