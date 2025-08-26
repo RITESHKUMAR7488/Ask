@@ -88,6 +88,43 @@ class RepositoryQueryImpl @Inject constructor(
             }
     }
 
+    // ✅ NEW: Get queries only from communities the user has joined
+    override fun getQueriesFromUserCommunities(userId: String, result: (UiState<List<QueryModel>>) -> Unit) {
+        // First, get the user's joined communities
+        database.collection(Constant.USERS)
+            .document(userId)
+            .collection(Constant.MY_COMMUNITIES)
+            .get()
+            .addOnSuccessListener { communityDocs ->
+                // Extract community IDs from user's joined communities
+                val communityIds = communityDocs.documents.mapNotNull { doc ->
+                    doc.getString("communityId")
+                }.filter { it.isNotEmpty() }
+
+                if (communityIds.isEmpty()) {
+                    // User hasn't joined any communities
+                    result.invoke(UiState.Success(emptyList()))
+                    return@addOnSuccessListener
+                }
+
+                // Now get queries from these communities
+                database.collection(Constant.POSTS)
+                    .whereIn("communityId", communityIds)
+                    .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener { queryDocs ->
+                        val queries = queryDocs.toObjects(QueryModel::class.java)
+                        result.invoke(UiState.Success(queries))
+                    }
+                    .addOnFailureListener { exception ->
+                        result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
+                    }
+            }
+            .addOnFailureListener { exception ->
+                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch user communities"))
+            }
+    }
+
     override fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit) {
         database.collection(Constant.POSTS)
             .document(queryId)

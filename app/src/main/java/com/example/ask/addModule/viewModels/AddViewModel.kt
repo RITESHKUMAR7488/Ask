@@ -31,6 +31,10 @@ class AddViewModel @Inject constructor(
     private val _allQueries = MutableLiveData<UiState<List<QueryModel>>>()
     val allQueries: LiveData<UiState<List<QueryModel>>> = _allQueries
 
+    // ✅ NEW: LiveData for community-specific queries
+    private val _communityQueries = MutableLiveData<UiState<List<QueryModel>>>()
+    val communityQueries: LiveData<UiState<List<QueryModel>>> = _communityQueries
+
     private val _updateStatus = MutableLiveData<UiState<String>>()
     val updateStatus: LiveData<UiState<String>> = _updateStatus
 
@@ -56,6 +60,14 @@ class AddViewModel @Inject constructor(
         _allQueries.value = UiState.Loading
         repository.getAllQueries {
             _allQueries.value = it
+        }
+    }
+
+    // ✅ NEW: Get queries from user's joined communities
+    fun getQueriesFromUserCommunities(userId: String) {
+        _communityQueries.value = UiState.Loading
+        repository.getQueriesFromUserCommunities(userId) {
+            _communityQueries.value = it
         }
     }
 
