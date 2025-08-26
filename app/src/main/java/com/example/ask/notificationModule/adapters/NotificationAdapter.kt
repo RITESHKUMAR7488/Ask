@@ -66,30 +66,35 @@ class NotificationAdapter(
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary_color))
                         chipType.text = "Help Request"
                         chipType.setChipBackgroundColorResource(R.color.help_chip_color)
+                        chipType.setTextColor(ContextCompat.getColor(context, R.color.primary_color))
                     }
                     "QUERY_UPDATE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_update)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.success_color))
                         chipType.text = "Query Update"
                         chipType.setChipBackgroundColorResource(R.color.update_chip_color)
+                        chipType.setTextColor(ContextCompat.getColor(context, R.color.success_color))
                     }
                     "COMMUNITY_INVITE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_group)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.secondary_color))
                         chipType.text = "Community"
                         chipType.setChipBackgroundColorResource(R.color.community_chip_color)
+                        chipType.setTextColor(ContextCompat.getColor(context, R.color.secondary_color))
                     }
                     "RESPONSE" -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_comment)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.info_color))
                         chipType.text = "Response"
                         chipType.setChipBackgroundColorResource(R.color.response_chip_color)
+                        chipType.setTextColor(ContextCompat.getColor(context, R.color.info_color))
                     }
                     else -> {
                         ivNotificationIcon.setImageResource(R.drawable.ic_notification)
                         ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.gray_600))
                         chipType.text = "Notification"
                         chipType.setChipBackgroundColorResource(R.color.chip_background)
+                        chipType.setTextColor(ContextCompat.getColor(context, R.color.gray_600))
                     }
                 }
             }
@@ -103,12 +108,14 @@ class NotificationAdapter(
                     viewUnreadIndicator.visibility = View.GONE
                     tvTitle.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
                     tvMessage.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
+                    chipType.alpha = 0.7f
                 } else {
                     // Unread notification styling
                     root.alpha = 1.0f
                     viewUnreadIndicator.visibility = View.VISIBLE
                     tvTitle.setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                     tvMessage.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                    chipType.alpha = 1.0f
                 }
             }
         }
@@ -175,5 +182,15 @@ class NotificationAdapter(
     fun markAllAsRead() {
         val updatedList = currentList.map { it.copy(isRead = true) }
         submitList(updatedList)
+    }
+
+    // Helper function to get total count
+    fun getTotalCount(): Int {
+        return currentList.size
+    }
+
+    // Helper function to check if there are any notifications
+    fun hasNotifications(): Boolean {
+        return currentList.isNotEmpty()
     }
 }
