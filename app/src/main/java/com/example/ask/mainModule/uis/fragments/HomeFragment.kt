@@ -79,11 +79,22 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun loadQueries() {
-        addViewModel.getAllQueries()
+        // ✅ CHANGED: Load queries from user's joined communities instead of all queries
+        val userId = preferenceManager.userId
+        if (!userId.isNullOrEmpty()) {
+            addViewModel.getQueriesFromUserCommunities(userId)
+        } else {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "User not logged in. Please login to view queries."
+            )
+            binding.swipeRefreshLayout.isRefreshing = false
+        }
     }
 
     private fun observeViewModel() {
-        addViewModel.allQueries.observe(viewLifecycleOwner) { state ->
+        // ✅ CHANGED: Observe communityQueries instead of allQueries
+        addViewModel.communityQueries.observe(viewLifecycleOwner) { state ->
             binding.swipeRefreshLayout.isRefreshing = false
 
             when (state) {
@@ -99,6 +110,8 @@ class HomeFragment : BaseFragment() {
                     if (state.data.isEmpty()) {
                         binding.recyclerViewQueries.visibility = View.GONE
                         binding.layoutEmptyState.visibility = View.VISIBLE
+                        // ✅ UPDATED: Better empty state message for community queries
+                        binding.tvEmptyMessage?.text = "No queries found in your joined communities.\nJoin communities to see queries or create your first query!"
                     } else {
                         binding.layoutEmptyState.visibility = View.GONE
                         binding.recyclerViewQueries.visibility = View.VISIBLE
@@ -111,10 +124,17 @@ class HomeFragment : BaseFragment() {
                     binding.recyclerViewQueries.visibility = View.GONE
                     binding.layoutEmptyState.visibility = View.VISIBLE
 
-                    motionToastUtil.showFailureToast(
-                        requireActivity(),
-                        "Failed to load queries: ${state.error}"
-                    )
+                    // ✅ IMPROVED: Better error handling
+                    val errorMessage = when {
+                        state.error.contains("permission", ignoreCase = true) ->
+                            "Permission denied. Please check your account permissions."
+                        state.error.contains("network", ignoreCase = true) ->
+                            "Network error. Please check your internet connection."
+                        else -> "Failed to load queries from your communities: ${state.error}"
+                    }
+
+                    motionToastUtil.showFailureToast(requireActivity(), errorMessage)
+                    binding.tvEmptyMessage?.text = "Failed to load queries.\nPull down to refresh."
                 }
             }
         }
@@ -180,7 +200,7 @@ class HomeFragment : BaseFragment() {
                 senderUserId = currentUserId,
                 senderPhoneNumber = currentUser.mobileNumber, // Assuming UserModel has phoneNumber
                 senderEmail = currentUser.email,             // Assuming UserModel has email
-                 // Assuming UserModel has profilePicture
+                // Assuming UserModel has profilePicture
             )
 
             // Show immediate feedback
@@ -212,7 +232,7 @@ class HomeFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
-        (activity as? AppCompatActivity)?.supportActionBar?.title = "Queries"
+        (activity as? AppCompatActivity)?.supportActionBar?.title = "Community Queries"
         // Refresh data when fragment becomes visible
         loadQueries()
     }
