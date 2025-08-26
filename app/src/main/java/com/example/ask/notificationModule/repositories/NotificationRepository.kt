@@ -25,4 +25,22 @@ interface NotificationRepository {
     )
 
     fun removeNotificationListener()
+
+    // ✅ NEW: Additional methods for better notification management
+    fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+        result: (UiState<String>) -> Unit
+    )
+
+    fun markAllNotificationsAsRead(
+        userId: String,
+        result: (UiState<String>) -> Unit
+    )
+
+    fun deleteNotification(
+        userId: String,
+        notificationId: String,
+        result: (UiState<String>) -> Unit
+    )
 }

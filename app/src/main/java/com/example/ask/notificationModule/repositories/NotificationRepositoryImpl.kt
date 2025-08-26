@@ -108,7 +108,7 @@ class NotificationRepositoryImpl @Inject constructor(
     }
 
     // Better version of markNotificationAsRead with userId
-    fun markNotificationAsRead(
+    override fun markNotificationAsRead(
         userId: String,
         notificationId: String,
         result: (UiState<String>) -> Unit
@@ -149,7 +149,7 @@ class NotificationRepositoryImpl @Inject constructor(
     }
 
     // Additional helper method to delete notification
-    fun deleteNotification(
+    override fun deleteNotification(
         userId: String,
         notificationId: String,
         result: (UiState<String>) -> Unit
@@ -170,7 +170,7 @@ class NotificationRepositoryImpl @Inject constructor(
     }
 
     // Helper method to mark all notifications as read
-    fun markAllNotificationsAsRead(
+    override fun markAllNotificationsAsRead(
         userId: String,
         result: (UiState<String>) -> Unit
     ) {
