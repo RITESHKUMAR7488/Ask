@@ -2,6 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Required permissions for notification features -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Vibration permission for haptic feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Phone call permission (for dialer intent) -->
+    <uses-permission android:name="android.permission.CALL_PHONE"
+        tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
+
+    <!-- Optional: Query all packages (for Android 11+) to check app availability -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -23,9 +38,7 @@
         <activity
             android:name=".addModule.uis.ChooseCommunityActivity"
             android:exported="false" />
-        <activity
-            android:name=".onBoardingModule.uis.SplashScreen"
-            android:exported="false" />
+
         <activity
             android:name=".communityModule.uis.Activities.JoinCommunity"
             android:exported="false" />
@@ -56,9 +69,7 @@
         <activity
             android:name=".onBoardingModule.uis.FirstScreen"
             android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
+
     </application>
 
 </manifest>

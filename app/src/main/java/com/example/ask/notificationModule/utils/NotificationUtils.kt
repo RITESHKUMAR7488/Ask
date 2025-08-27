@@ -1,11 +1,12 @@
 package com.example.ask.notificationModule.utils
 
+import android.util.Patterns
 import com.example.ask.notificationModule.models.NotificationModel
 
 object NotificationUtils {
 
     /**
-     * Creates a help request notification with contact details
+     * Creates an enhanced help request notification with contact details
      */
     fun createHelpRequestNotification(
         targetUserId: String,
@@ -13,31 +14,43 @@ object NotificationUtils {
         queryId: String,
         senderUserId: String,
         senderUserName: String,
-        senderPhoneNumber: String? = null, // ✅ NEW: Added phone number
-        senderEmail: String? = null,       // ✅ NEW: Added email
+        senderPhoneNumber: String? = null,
+        senderEmail: String? = null,
         senderProfileImage: String? = null
     ): NotificationModel {
 
-        // ✅ NEW: Create contact message
+        // Validate and clean contact info
+        val validPhone = senderPhoneNumber?.trim()?.takeIf {
+            it.isNotEmpty() && it.replace(Regex("[^\\d+]"), "").length >= 7
+        }
+
+        val validEmail = senderEmail?.trim()?.takeIf {
+            it.isNotEmpty() && Patterns.EMAIL_ADDRESS.matcher(it).matches()
+        }
+
+        // Create enhanced contact message
         val contactInfo = buildString {
-            if (!senderPhoneNumber.isNullOrEmpty()) {
-                append("📞 Phone: $senderPhoneNumber")
+            if (!validPhone.isNullOrEmpty()) {
+                append("📞 Phone: $validPhone")
             }
-            if (!senderEmail.isNullOrEmpty()) {
-                if (isNotEmpty()) append(" • ")
-                append("📧 Email: $senderEmail")
+            if (!validEmail.isNullOrEmpty()) {
+                if (isNotEmpty()) append("\n")
+                append("📧 Email: $validEmail")
             }
         }
 
-        val message = if (contactInfo.isNotEmpty()) {
-            "Hi! I can help you with '$queryTitle'. Contact me: $contactInfo"
-        } else {
-            "Hi! I can help you with '$queryTitle'. Let me know if you need assistance!"
+        val message = when {
+            contactInfo.isNotEmpty() -> {
+                "🤝 Hi! I can help you with '$queryTitle'.\n\nContact me:\n$contactInfo"
+            }
+            else -> {
+                "🤝 Hi! I can help you with '$queryTitle'. Let me know if you need assistance!"
+            }
         }
 
         return NotificationModel(
             userId = targetUserId,
-            title = "🤝 Someone wants to help!",
+            title = "🆘 Someone wants to help!",
             message = message,
             type = "HELP_REQUEST",
             queryId = queryId,
@@ -62,7 +75,7 @@ object NotificationUtils {
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
-            title = "Query Update",
+            title = "🔄 Query Update",
             message = "Update on '$queryTitle': $updateMessage",
             type = "QUERY_UPDATE",
             queryId = queryId,
@@ -86,8 +99,8 @@ object NotificationUtils {
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
-            title = "New Response",
-            message = "$senderUserName responded to your query: $queryTitle",
+            title = "💬 New Response",
+            message = "$senderUserName responded to your query: '$queryTitle'",
             type = "RESPONSE",
             queryId = queryId,
             senderUserId = senderUserId,
@@ -111,7 +124,7 @@ object NotificationUtils {
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
-            title = "Community Invitation",
+            title = "👥 Community Invitation",
             message = "$senderUserName invited you to join '$communityName' community",
             type = "COMMUNITY_INVITE",
             communityId = communityId,
@@ -135,7 +148,7 @@ object NotificationUtils {
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
-            title = title,
+            title = "📢 $title",
             message = message,
             type = type,
             actionData = actionData,
@@ -145,7 +158,7 @@ object NotificationUtils {
     }
 
     /**
-     * Gets formatted time difference
+     * Enhanced time formatting
      */
     fun getTimeAgo(timestamp: Long): String {
         val now = System.currentTimeMillis()
@@ -168,7 +181,7 @@ object NotificationUtils {
     }
 
     /**
-     * Validates notification data
+     * Enhanced validation
      */
     fun isValidNotification(notification: NotificationModel): Boolean {
         return !notification.userId.isNullOrEmpty() &&
@@ -187,6 +200,41 @@ object NotificationUtils {
             "QUERY_UPDATE" -> 2 // Medium priority
             "COMMUNITY_INVITE" -> 1 // Low priority
             else -> 0 // Lowest priority
+        }
+    }
+
+    /**
+     * Extract contact info from notification message
+     */
+    fun extractContactInfo(message: String): Pair<String?, String?> {
+        val phoneRegex = Regex("📞\\s*(?:Phone:|Call:)?\\s*([+]?[0-9\\s()-]{7,15})")
+        val emailRegex = Regex("📧\\s*(?:Email:|Mail:)?\\s*([\\w._%+-]+@[\\w.-]+\\.[A-Z|a-z]{2,})")
+
+        val phoneNumber = phoneRegex.find(message)?.groupValues?.get(1)?.trim()?.replace(Regex("[\\s()-]"), "")
+        val email = emailRegex.find(message)?.groupValues?.get(1)?.trim()
+
+        return Pair(phoneNumber, email)
+    }
+
+    /**
+     * Check if notification contains contact info
+     */
+    fun hasContactInfo(notification: NotificationModel): Boolean {
+        val message = notification.message ?: ""
+        return message.contains("📞") || message.contains("📧") ||
+                message.contains("Phone:") || message.contains("Email:")
+    }
+
+    /**
+     * Get notification summary for display
+     */
+    fun getNotificationSummary(notification: NotificationModel): String {
+        return when (notification.type) {
+            "HELP_REQUEST" -> "Someone wants to help with your query"
+            "RESPONSE" -> "New response to your query"
+            "QUERY_UPDATE" -> "Your query has been updated"
+            "COMMUNITY_INVITE" -> "New community invitation"
+            else -> notification.message ?: "New notification"
         }
     }
 }
