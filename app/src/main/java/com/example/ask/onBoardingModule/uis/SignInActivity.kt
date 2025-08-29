@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.databinding.DataBindingUtil
 import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.R
+import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.databinding.ActivitySignInBinding
 import com.example.ask.onBoardingModule.viewModels.OnBoardingViewModel
 import com.example.ask.utilities.BaseActivity
@@ -20,6 +21,8 @@ import www.sanju.motiontoast.MotionToast
 class SignInActivity : BaseActivity() {
     private lateinit var binding: ActivitySignInBinding
     private val onBoardingViewModel: OnBoardingViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -32,10 +35,7 @@ class SignInActivity : BaseActivity() {
                 val intent= Intent(this@SignInActivity,RegisterActivity::class.java)
                 startActivity(intent)
             }
-
-
         }
-
     }
 
     private fun logIn() {
@@ -43,7 +43,6 @@ class SignInActivity : BaseActivity() {
             when {
                 etEmail.text.toString().isBlank()->{
                     etEmail.error="please enter email"
-
                 }
                 etPassword.text.toString().isBlank()->{
                     etPassword.error="please enter the password"
@@ -61,9 +60,10 @@ class SignInActivity : BaseActivity() {
                             is UiState.Success -> {
                                 binding.progressBar.visibility = View.GONE
                                 binding.tvSignIn.visibility = View.VISIBLE
-                                preferenceManager.isLoggedIn = true  // ✅ keep this after repository sets userModel
-                                startActivity(Intent(this@SignInActivity, MainScreen::class.java))
-                                finish()
+                                preferenceManager.isLoggedIn = true
+
+                                // Initialize CometChat after successful Firebase login
+                                initializeCometChatLogin()
                             }
                             is UiState.Failure -> {
                                 binding.progressBar.visibility = View.GONE
@@ -72,15 +72,37 @@ class SignInActivity : BaseActivity() {
                                 Log.e("Login", "Login failed: ${state.error}")
                             }
                         }
-
                     }
-
                 }
-
-
             }
-
         }
+    }
 
+    private fun initializeCometChatLogin() {
+        // Show loading for CometChat initialization
+        motionToastUtil.showInfoToast(this, "Initializing chat...")
+
+        chatViewModel.ensureCometChatLogin { success ->
+            if (success) {
+                // Both Firebase and CometChat login successful
+                Log.d("SignInActivity", "Both Firebase and CometChat login successful")
+                motionToastUtil.showSuccessToast(this, "Login successful!")
+
+                // Navigate to main screen
+                startActivity(Intent(this@SignInActivity, MainScreen::class.java))
+                finish()
+            } else {
+                // Firebase login successful but CometChat failed
+                Log.w("SignInActivity", "Firebase login successful but CometChat initialization failed")
+                motionToastUtil.showWarningToast(
+                    this,
+                    "Login successful! Chat features may be limited."
+                )
+
+                // Still navigate to main screen as Firebase login was successful
+                startActivity(Intent(this@SignInActivity, MainScreen::class.java))
+                finish()
+            }
+        }
     }
 }

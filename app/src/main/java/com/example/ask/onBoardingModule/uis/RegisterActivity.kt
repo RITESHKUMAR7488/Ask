@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.databinding.DataBindingUtil
 import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.R
+import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.databinding.ActivityRegisterBinding
 import com.example.ask.onBoardingModule.models.UserModel
 import com.example.ask.onBoardingModule.viewModels.OnBoardingViewModel
@@ -20,6 +21,8 @@ import www.sanju.motiontoast.MotionToast
 class RegisterActivity : BaseActivity() {
     private lateinit var binding: ActivityRegisterBinding
     private val onBoardingViewModel: OnBoardingViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -28,9 +31,7 @@ class RegisterActivity : BaseActivity() {
             btnSignUp.setOnClickListener{
                 validate()
             }
-
         }
-
     }
 
     private fun validate() {
@@ -66,36 +67,60 @@ class RegisterActivity : BaseActivity() {
                     }
 
                     UiState.Loading -> {
-                        binding.progressBar.visibility = View.GONE
-                        binding.textView3.visibility = View.VISIBLE
-
+                        binding.progressBar.visibility = View.VISIBLE
+                        binding.textView3.visibility = View.GONE
                     }
                     is UiState.Success<*> ->{
                         binding.progressBar.visibility = View.GONE
                         binding.textView3.visibility = View.VISIBLE
-                        preferenceManager.isLoggedIn=true
+                        preferenceManager.isLoggedIn = true
 
-                        val userModel=UserModel(
-                            uid=preferenceManager.userId,
-                            email=email,
-                            fullName=fullName,
-                            mobileNumber=mobileNumber,
+                        val userModel = UserModel(
+                            uid = preferenceManager.userId,
+                            email = email,
+                            fullName = fullName,
+                            mobileNumber = mobileNumber,
                             password = password
                         )
-                        preferenceManager.userModel=userModel
+                        preferenceManager.userModel = userModel
+
                         motionToastUtil.showSuccessToast(
                             this,
                             "Registration Successfully",
                             duration = MotionToast.SHORT_DURATION
-
-
                         )
-                        startActivity(Intent(this, MainScreen::class.java))
 
+                        // Initialize CometChat after successful registration
+                        initializeCometChatRegistration()
                     }
                 }
             }
+        }
+    }
 
+    private fun initializeCometChatRegistration() {
+        // Show loading for CometChat initialization
+        motionToastUtil.showInfoToast(this, "Setting up chat...")
+
+        chatViewModel.ensureCometChatLogin { success ->
+            if (success) {
+                // Both Firebase and CometChat registration successful
+                motionToastUtil.showSuccessToast(this, "Account created successfully!")
+
+                // Navigate to main screen
+                startActivity(Intent(this, MainScreen::class.java))
+                finish()
+            } else {
+                // Firebase registration successful but CometChat failed
+                motionToastUtil.showWarningToast(
+                    this,
+                    "Account created! Chat setup will complete later."
+                )
+
+                // Still navigate to main screen as Firebase registration was successful
+                startActivity(Intent(this, MainScreen::class.java))
+                finish()
+            }
         }
     }
 }

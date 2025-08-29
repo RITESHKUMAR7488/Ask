@@ -11,6 +11,8 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.chatModule.uis.ChatActivity
+import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
@@ -26,6 +28,7 @@ class HomeFragment : BaseFragment() {
 
     private val addViewModel: AddViewModel by viewModels()
     private val notificationViewModel: NotificationViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var queryAdapter: QueryAdapter
 
     companion object {
@@ -49,6 +52,19 @@ class HomeFragment : BaseFragment() {
         observeViewModel()
         loadQueries()
         debugCommunityData()
+
+        // Initialize CometChat login when fragment is created
+        initializeCometChat()
+    }
+
+    private fun initializeCometChat() {
+        chatViewModel.ensureCometChatLogin { success ->
+            if (success) {
+                Log.d(TAG, "CometChat initialized successfully in HomeFragment")
+            } else {
+                Log.e(TAG, "Failed to initialize CometChat in HomeFragment")
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -176,6 +192,21 @@ class HomeFragment : BaseFragment() {
                 }
             }
         }
+
+        // Observe CometChat login state
+        chatViewModel.loginState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    Log.d(TAG, "CometChat login successful")
+                }
+                is UiState.Failure -> {
+                    Log.e(TAG, "CometChat login failed: ${state.error}")
+                }
+                is UiState.Loading -> {
+                    Log.d(TAG, "CometChat login in progress...")
+                }
+            }
+        }
     }
 
     private fun onQueryClicked(query: QueryModel) {
@@ -221,9 +252,69 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
+        val currentUserId = preferenceManager.userId
+        val targetUserId = query.userId
+        val userName = query.userName
+        val queryTitle = query.title
+
+        if (currentUserId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Please login to start chatting"
+            )
+            return
+        }
+
+        if (targetUserId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Unable to start chat. User information not available."
+            )
+            return
+        }
+
+        if (currentUserId == targetUserId) {
+            motionToastUtil.showWarningToast(
+                requireActivity(),
+                "You cannot chat with yourself"
+            )
+            return
+        }
+
+        // Check if CometChat is initialized
+        if (!chatViewModel.isLoggedInToCometChat()) {
+            motionToastUtil.showInfoToast(
+                requireActivity(),
+                "Initializing chat..."
+            )
+
+            chatViewModel.ensureCometChatLogin { success ->
+                if (success) {
+                    startChatActivity(targetUserId, userName, queryTitle)
+                } else {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to initialize chat. Please try again."
+                    )
+                }
+            }
+        } else {
+            startChatActivity(targetUserId, userName, queryTitle)
+        }
+    }
+
+    private fun startChatActivity(targetUserId: String, userName: String?, queryTitle: String?) {
+        val intent = ChatActivity.newIntent(
+            context = requireContext(),
+            userId = targetUserId,
+            userName = userName ?: "Unknown User",
+            queryTitle = queryTitle
+        )
+        startActivity(intent)
+
+        motionToastUtil.showSuccessToast(
             requireActivity(),
-            "Chat feature coming soon!"
+            "Opening chat with ${userName ?: "user"}..."
         )
     }
 
@@ -232,12 +323,16 @@ class HomeFragment : BaseFragment() {
         (activity as? AppCompatActivity)?.supportActionBar?.title = "Community Queries"
         Log.d(TAG, "onResume: Refreshing queries")
         loadQueries()
+
+        // Ensure CometChat is still logged in
+        chatViewModel.ensureCometChatLogin { /* handled in observer */ }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
+
     private fun debugCommunityData() {
         val userId = preferenceManager.userId
         Log.d(TAG, "debugCommunityData: Starting debug for userId = $userId")

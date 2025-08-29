@@ -17,6 +17,8 @@ import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
+import com.example.ask.chatModule.uis.ChatActivity
+import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.mainModule.uis.fragments.HomeFragment
@@ -32,6 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var binding: ActivityMainScreenBinding
     private val notificationViewModel: NotificationViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var toggle: ActionBarDrawerToggle
 
     companion object {
@@ -85,6 +88,9 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         // Setup menu button functionality
         setupMenuButton()
 
+        // Initialize CometChat
+        initializeCometChat()
+
         // Default fragment = Home
         replaceFragment(HomeFragment(), "Queries")
 
@@ -96,15 +102,27 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                         startActivity(intent)
                         true
                     }
+
                     R.id.community -> {
                         replaceFragment(CommunityFragment(), "Communities")
                         true
                     }
+
                     else -> {
                         replaceFragment(HomeFragment(), "Queries")
                         true
                     }
                 }
+            }
+        }
+    }
+
+    private fun initializeCometChat() {
+        chatViewModel.ensureCometChatLogin { success ->
+            if (success) {
+                Log.d(TAG, "CometChat initialized successfully in MainActivity")
+            } else {
+                Log.e(TAG, "Failed to initialize CometChat in MainActivity")
             }
         }
     }
@@ -154,7 +172,8 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
             binding.navigationView.setPadding(0, 0, 0, 0)
 
             // Get the NavigationMenuView (internal view that holds menu items)
-            val navigationMenuView = binding.navigationView.getChildAt(0) as? android.widget.ListView
+            val navigationMenuView =
+                binding.navigationView.getChildAt(0) as? android.widget.ListView
             navigationMenuView?.let { menuView ->
                 menuView.setPadding(0, 0, 0, 0)
 
@@ -198,7 +217,8 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
      */
     private fun setupNavigationHeader() {
         val headerView = binding.navigationView.getHeaderView(0)
-        val ivProfileImage = headerView.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileImage)
+        val ivProfileImage =
+            headerView.findViewById<de.hdodenhof.circleimageview.CircleImageView>(R.id.ivProfileImage)
         val tvUserName = headerView.findViewById<TextView>(R.id.tvUserName)
         val tvUserEmail = headerView.findViewById<TextView>(R.id.tvUserEmail)
 
@@ -262,31 +282,49 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                 // Update bottom navigation selection
                 binding.bottomNavigationView.selectedItemId = R.id.home
             }
+
             R.id.nav_my_queries -> {
                 // TODO: Navigate to My Queries fragment/activity
                 motionToastUtil.showInfoToast(this, "My Queries - Coming Soon!")
             }
+
             R.id.nav_communities -> {
                 replaceFragment(CommunityFragment(), "Communities")
                 // Update bottom navigation selection
                 binding.bottomNavigationView.selectedItemId = R.id.community
             }
+
             R.id.nav_notifications -> {
                 val intent = Intent(this, NotificationActivity::class.java)
                 startActivity(intent)
             }
+
+            R.id.nav_chat -> {
+                // Open chat conversations list
+                val intent = ChatActivity.newIntent(
+                    context = this,
+                    userId = "", // Empty userId will show conversation list
+                    userName = "Conversations",
+                    queryTitle = null
+                )
+                startActivity(intent)
+            }
+
             R.id.nav_profile -> {
                 // TODO: Navigate to Profile activity
                 motionToastUtil.showInfoToast(this, "Profile - Coming Soon!")
             }
+
             R.id.nav_settings -> {
                 // TODO: Navigate to Settings activity
                 motionToastUtil.showInfoToast(this, "Settings - Coming Soon!")
             }
+
             R.id.nav_about -> {
                 // TODO: Show About dialog/activity
                 motionToastUtil.showInfoToast(this, "About - Coming Soon!")
             }
+
             R.id.nav_logout -> {
                 showLogoutConfirmation()
             }
@@ -315,17 +353,31 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
      * Perform logout operation
      */
     private fun performLogout() {
-        // Clear user data from preferences
-        preferenceManager.clearUserData()
+        // Show loading
+        motionToastUtil.showInfoToast(this, "Logging out...")
 
-        // Show success message
-        motionToastUtil.showSuccessToast(this, "Logged out successfully")
+        // Logout from CometChat first
+        chatViewModel.logoutFromCometChat { cometChatSuccess ->
+            // Proceed with Firebase/app logout regardless of CometChat result
 
-        // Navigate to FirstScreen
-        val intent = Intent(this, FirstScreen::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+            // Clear user data from preferences
+            preferenceManager.clearUserData()
+
+            // Show success message
+            val message = if (cometChatSuccess) {
+                "Logged out successfully"
+            } else {
+                "Logged out (chat session may still be active)"
+            }
+
+            motionToastUtil.showSuccessToast(this, message)
+
+            // Navigate to FirstScreen
+            val intent = Intent(this, FirstScreen::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
     }
 
     /**
@@ -347,11 +399,13 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                         Log.d(TAG, "Unread notification count: ${state.data}")
                         updateNotificationBadge(state.data)
                     }
+
                     is UiState.Failure -> {
                         Log.e(TAG, "Failed to get unread count: ${state.error}")
                         // Hide badge on error
                         updateNotificationBadge(0)
                     }
+
                     is UiState.Loading -> {
                         Log.d(TAG, "Loading notification count...")
                         // Keep current state while loading
@@ -410,17 +464,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         // Refresh notification count when activity resumes
         val userId = preferenceManager.userId
         if (!userId.isNullOrEmpty()) {
-            Log.d(TAG, "Refreshing notification count for user: $userId")
-            notificationViewModel.getUnreadNotificationCount(userId)
+            Log.d(TAG, "Refreshing notification count for user:")
         }
-
-        // Refresh navigation header in case user data changed
-        setupNavigationHeader()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "onDestroy called")
-        notificationViewModel.removeNotificationListener()
     }
 }

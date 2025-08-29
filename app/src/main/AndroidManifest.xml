@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Required permissions for notification features -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -17,10 +21,24 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Media permissions for CometChat file sharing -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Camera permission for CometChat -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Audio recording permission for CometChat voice messages -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Write external storage for older Android versions -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Read external storage -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:name=".MyApplication"
@@ -31,7 +49,17 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Ask">
+        android:theme="@style/Theme.Ask"
+        android:largeHeap="true"
+        android:hardwareAccelerated="true">
+
+        <!-- Chat Activity -->
+        <activity
+            android:name=".chatModule.uis.ChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Ask"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".notificationModule.uis.NotificationActivity"
             android:exported="false" />
@@ -56,7 +84,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
