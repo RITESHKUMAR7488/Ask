@@ -7,13 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
-import com.example.ask.R
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.ask.R
 import com.example.ask.communityModule.adapters.MyCommunityAdapter
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActivity
-import com.example.ask.communityModule.uis.Activities.JoinCommunity
 import com.example.ask.communityModule.uis.CommunityActivity
 import com.example.ask.communityModule.viewModels.CommunityViewModel
 import com.example.ask.databinding.FragmentCommunityBinding
@@ -45,12 +44,13 @@ class CommunityFragment : BaseFragment() {
 
         setupRecyclerView()
         setupClickListeners()
+        observeViewModel()
         loadUserCommunities()
     }
 
     private fun setupRecyclerView() {
         communityAdapter = MyCommunityAdapter { community ->
-            onCommunityClick(community)
+            showCommunityOptionsBottomSheet(community)
         }
 
         binding.recyclerViewCommunities.apply {
@@ -61,33 +61,12 @@ class CommunityFragment : BaseFragment() {
 
     private fun setupClickListeners() {
         binding.btnAdd.setOnClickListener {
-            showCommunityOptionsBottomSheet()
+            val intent = Intent(requireContext(), CreateCommunityActivity::class.java)
+            startActivity(intent)
         }
 
-        // Setup swipe to refresh
         binding.swipeRefreshLayout.setOnRefreshListener {
             loadUserCommunities()
-        }
-    }
-
-    private fun showCommunityOptionsBottomSheet() {
-        val bottomSheetView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.bottom_sheet_community_options, null)
-
-        val bottomSheetDialog = BottomSheetDialog(requireContext())
-        bottomSheetDialog.setContentView(bottomSheetView)
-        bottomSheetDialog.show()
-
-        // Handle Create Community button click
-        bottomSheetView.findViewById<View>(R.id.btnCreateCommunity).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(requireContext(), CreateCommunityActivity::class.java))
-        }
-
-        // Handle Join Community button click
-        bottomSheetView.findViewById<View>(R.id.btnJoinCommunity).setOnClickListener {
-            bottomSheetDialog.dismiss()
-            startActivity(Intent(requireContext(), JoinCommunity::class.java))
         }
     }
 
@@ -102,11 +81,12 @@ class CommunityFragment : BaseFragment() {
             binding.swipeRefreshLayout.isRefreshing = false
             return
         }
-
         viewModel.getUserCommunities(userId)
+    }
+
+    private fun observeViewModel() {
         viewModel.userCommunities.observe(viewLifecycleOwner) { state ->
             binding.swipeRefreshLayout.isRefreshing = false
-
             when (state) {
                 is UiState.Loading -> {
                     binding.progressBar.visibility = View.VISIBLE
@@ -118,7 +98,6 @@ class CommunityFragment : BaseFragment() {
                     communityAdapter.submitList(state.data)
 
                     if (state.data.isEmpty()) {
-                        // Show empty state
                         binding.recyclerViewCommunities.visibility = View.GONE
                         binding.layoutEmptyState.visibility = View.VISIBLE
                     } else {
@@ -138,58 +117,17 @@ class CommunityFragment : BaseFragment() {
                 }
             }
         }
-    }
 
-    private fun onCommunityClick(community: CommunityModels) {
-        val intent = Intent(requireContext(), CommunityActivity::class.java)
-        intent.putExtra("community_data", community)
-        startActivity(intent)
-    }
-
-    private fun showJoinCommunityDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        val editText = EditText(requireContext()).apply {
-            hint = "Enter community code"
-            setPadding(50, 30, 50, 30)
-        }
-
-        builder.setTitle("Join Community")
-            .setView(editText)
-            .setPositiveButton("Join") { _, _ ->
-                val code = editText.text.toString().trim()
-                if (code.isNotBlank()) {
-                    joinCommunity(code)
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun joinCommunity(communityCode: String) {
-        val userId = preferenceManager.userId
-        if (userId.isNullOrBlank()) {
-            motionToastUtil.showFailureToast(
-                requireActivity(),
-                "User not logged in",
-                MotionToast.SHORT_DURATION
-            )
-            return
-        }
-
-        viewModel.joinCommunity(userId, communityCode)
-        viewModel.joinCommunity.observe(viewLifecycleOwner) { state ->
+        viewModel.leaveCommunity.observe(viewLifecycleOwner) { state ->
             when (state) {
-                is UiState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
-                }
+                is UiState.Loading -> binding.progressBar.visibility = View.VISIBLE
                 is UiState.Success -> {
                     binding.progressBar.visibility = View.GONE
                     motionToastUtil.showSuccessToast(
                         requireActivity(),
-                        "Successfully joined ${state.data.communityName}!",
+                        state.data,
                         MotionToast.SHORT_DURATION
                     )
-                    // Refresh the list
                     loadUserCommunities()
                 }
                 is UiState.Failure -> {
@@ -202,6 +140,102 @@ class CommunityFragment : BaseFragment() {
                 }
             }
         }
+
+        viewModel.deleteCommunity.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Loading -> binding.progressBar.visibility = View.VISIBLE
+                is UiState.Success -> {
+                    binding.progressBar.visibility = View.GONE
+                    motionToastUtil.showSuccessToast(
+                        requireActivity(),
+                        state.data,
+                        MotionToast.SHORT_DURATION
+                    )
+                    loadUserCommunities()
+                }
+                is UiState.Failure -> {
+                    binding.progressBar.visibility = View.GONE
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        state.error,
+                        MotionToast.SHORT_DURATION
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showCommunityOptionsBottomSheet(community: CommunityModels) {
+        val bottomSheetView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.bottom_sheet_community_actions, null)
+
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        bottomSheetDialog.setContentView(bottomSheetView)
+        bottomSheetDialog.show()
+
+        val btnView = bottomSheetView.findViewById<View>(R.id.btnViewCommunity)
+        val btnLeave = bottomSheetView.findViewById<View>(R.id.btnLeaveCommunity)
+        val btnDelete = bottomSheetView.findViewById<View>(R.id.btnDeleteCommunity)
+        val btnCancel = bottomSheetView.findViewById<View>(R.id.btnCancel)
+
+        // Show/hide based on role
+        when (community.role?.lowercase()) {
+            "admin" -> {
+                btnDelete.visibility = View.VISIBLE
+                btnLeave.visibility = View.GONE
+            }
+            "member" -> {
+                btnLeave.visibility = View.VISIBLE
+                btnDelete.visibility = View.GONE
+            }
+            else -> {
+                btnLeave.visibility = View.GONE
+                btnDelete.visibility = View.GONE
+            }
+        }
+
+        btnView.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(requireContext(), CommunityActivity::class.java)
+            intent.putExtra("community_data", community)
+            startActivity(intent)
+        }
+
+        btnLeave.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showLeaveCommunityConfirmation(community)
+        }
+
+        btnDelete.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showDeleteCommunityConfirmation(community)
+        }
+
+        btnCancel.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+    }
+
+    private fun showLeaveCommunityConfirmation(community: CommunityModels) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Leave Community")
+            .setMessage("Are you sure you want to leave ${community.communityName}?")
+            .setPositiveButton("Yes") { _, _ ->
+                viewModel.leaveCommunity(preferenceManager.userId ?: "", community.communityId ?: "")
+            }
+            .setNegativeButton("No", null)
+            .show()
+    }
+
+    private fun showDeleteCommunityConfirmation(community: CommunityModels) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Community")
+            .setMessage("Are you sure you want to delete ${community.communityName}? This action cannot be undone.")
+            .setPositiveButton("Yes") { _, _ ->
+                viewModel.deleteCommunity(preferenceManager.userId ?: "", community.communityId ?: "")
+            }
+            .setNegativeButton("No", null)
+            .show()
     }
 
     override fun onResume() {

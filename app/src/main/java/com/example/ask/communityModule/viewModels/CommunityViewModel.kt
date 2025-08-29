@@ -24,6 +24,14 @@ class CommunityViewModel @Inject constructor(
     private val _userCommunities = MutableLiveData<UiState<List<CommunityModels>>>()
     val userCommunities: LiveData<UiState<List<CommunityModels>>> get() = _userCommunities
 
+    // New LiveData for leave community operation
+    private val _leaveCommunity = MutableLiveData<UiState<String>>()
+    val leaveCommunity: LiveData<UiState<String>> = _leaveCommunity
+
+    // New LiveData for delete community operation
+    private val _deleteCommunity = MutableLiveData<UiState<String>>()
+    val deleteCommunity: LiveData<UiState<String>> = _deleteCommunity
+
     // ✅ FIXED: Following OnBoardingViewModel method signature pattern
     fun addCommunity(userId: String, model: CommunityModels, role: String) {
         _addCommunity.value = UiState.Loading
@@ -43,6 +51,20 @@ class CommunityViewModel @Inject constructor(
         _userCommunities.value = UiState.Loading
         repository.getUserCommunity(userId) { result ->
             _userCommunities.value = result
+        }
+    }
+
+    fun leaveCommunity(userId: String, communityId: String) {
+        _leaveCommunity.value = UiState.Loading
+        repository.leaveCommunity(userId, communityId) {
+            _leaveCommunity.value = it
+        }
+    }
+
+    fun deleteCommunity(userId: String, communityId: String) {
+        _deleteCommunity.value = UiState.Loading
+        repository.deleteCommunity(userId, communityId) {
+            _deleteCommunity.value = it
         }
     }
 
