@@ -45,11 +45,12 @@
         android:theme="@style/Theme.Ask">
 
         <!-- Chat Activity -->
+        <!-- Replace your existing ChatActivity declaration with this -->
         <activity
             android:name=".chatModule.ui.ChatActivity"
             android:exported="false"
             android:parentActivityName=".mainModule.uis.activities.MainScreen"
-            android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar"
+            android:theme="@style/Theme.Ask"
             tools:ignore="MissingClass" />
 
         <activity

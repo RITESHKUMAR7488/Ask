@@ -2,6 +2,8 @@ package com.example.ask.mainModule.uis.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
@@ -16,6 +18,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.cometchat.chat.models.User
+import com.example.ask.MyApplication
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
 import com.example.ask.chatModule.managers.CometChatManager
@@ -25,6 +28,7 @@ import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.mainModule.uis.fragments.HomeFragment
 import com.example.ask.notificationModule.uis.NotificationActivity
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
+import com.example.ask.onBoardingModule.models.UserModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
@@ -55,23 +59,37 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
             return
         }
 
-        // ✅ Ensure CometChat is initialized before setting up screen
-        cometChatManager.initializeCometChat(this) { success, message ->
-            if (success) {
-                Log.d(TAG, "CometChat initialized in MainScreen: $message")
+        // Wait for CometChat initialization before setting up screen
+        cometChatManager.waitForInitialization { isInitialized ->
+            if (isInitialized) {
+                Log.d(TAG, "CometChat is ready")
 
                 // Setup main screen UI only after init
                 setupMainScreen()
 
-                // Ensure CometChat login
-                ensureCometChatLogin()
+                // Ensure CometChat login after a short delay to let UI setup complete
+                Handler(Looper.getMainLooper()).postDelayed({
+                    ensureCometChatLogin()
+                }, 500) // 500ms delay
+
             } else {
-                Log.e(TAG, "CometChat init failed in MainScreen: $message")
-                motionToastUtil.showFailureToast(this, "Chat services unavailable. Please try again later.")
+                Log.e(TAG, "CometChat initialization timeout")
+
+                // Fallback: try to initialize manually
+                cometChatManager.initializeCometChat(this) { success, message ->
+                    if (success) {
+                        Log.d(TAG, "CometChat manual init successful: $message")
+                        setupMainScreen()
+                        ensureCometChatLogin()
+                    } else {
+                        Log.e(TAG, "CometChat manual init failed: $message")
+                        motionToastUtil.showFailureToast(this, "Chat services unavailable. App will work without chat features.")
+                        setupMainScreen() // Setup UI anyway, just without chat
+                    }
+                }
             }
         }
     }
-
     private fun isUserLoggedIn(): Boolean {
         return preferenceManager.isLoggedIn &&
                 preferenceManager.userModel != null &&
@@ -351,19 +369,103 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
 
     private fun navigateToChatActivity() {
         val userModel = preferenceManager.userModel
-        if (userModel?.uid != null && cometChatManager.isCometChatLoggedIn()) {
-            startActivity(Intent(this, ChatActivity::class.java))
-        } else {
-            motionToastUtil.showFailureToast(this, "Please wait, connecting to chat...")
-            userModel?.uid?.let { uid ->
-                cometChatManager.loginToCometChat(uid) { success, _, _ ->
-                    if (success) {
-                        startActivity(Intent(this@MainScreen, ChatActivity::class.java))
+        val userId = preferenceManager.userId
+
+        if (userModel?.uid == null || userId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(this, "Please login to access chat")
+            return
+        }
+
+        // Check if CometChat is initialized first
+        if (!MyApplication.isCometChatInitialized) {
+            motionToastUtil.showInfoToast(this, "Initializing chat services...")
+
+            // Wait for initialization
+            cometChatManager.waitForInitialization { isInitialized ->
+                runOnUiThread {
+                    if (isInitialized) {
+                        proceedWithChatLogin(userModel)
                     } else {
-                        motionToastUtil.showFailureToast(this@MainScreen, "Failed to connect to chat. Please try again.")
+                        motionToastUtil.showFailureToast(this, "Chat services are not available. Please try again later.")
+                    }
+                }
+            }
+            return
+        }
+
+        // If initialized, proceed with login check
+        proceedWithChatLogin(userModel)
+    }
+
+    private fun proceedWithChatLogin(userModel: UserModel) {
+        Log.d(TAG, "Proceeding with chat login for user: ${userModel.uid}")
+
+        if (cometChatManager.isCometChatLoggedIn()) {
+            // Already logged in, launch chat
+            Log.d(TAG, "User already logged in to CometChat")
+            launchChatActivity()
+        } else {
+            // Need to login to CometChat
+            Log.d(TAG, "User not logged in to CometChat, attempting login...")
+            motionToastUtil.showInfoToast(this, "Connecting to chat...")
+
+            cometChatManager.loginToCometChat(userModel.uid!!) { success, user, message ->
+                runOnUiThread {
+                    Log.d(TAG, "CometChat login result: success=$success, message=$message")
+
+                    if (success && user != null) {
+                        Log.d(TAG, "CometChat login successful, launching chat")
+                        launchChatActivity()
+                    } else {
+                        Log.w(TAG, "CometChat login failed, trying to create user first")
+
+                        // Try to create user if login fails
+                        motionToastUtil.showInfoToast(this, "Setting up chat account...")
+
+                        cometChatManager.createCometChatUser(userModel) { created, createMessage ->
+                            runOnUiThread {
+                                Log.d(TAG, "CometChat user creation result: success=$created, message=$createMessage")
+
+                                if (created) {
+                                    Log.d(TAG, "User created successfully, retrying login...")
+                                    // Retry login after user creation
+                                    cometChatManager.loginToCometChat(userModel.uid!!) { retrySuccess, retryUser, retryMessage ->
+                                        runOnUiThread {
+                                            Log.d(TAG, "CometChat retry login result: success=$retrySuccess, message=$retryMessage")
+
+                                            if (retrySuccess && retryUser != null) {
+                                                Log.d(TAG, "Retry login successful!")
+                                                motionToastUtil.showSuccessToast(this, "Chat account ready!")
+                                                launchChatActivity()
+                                            } else {
+                                                Log.e(TAG, "Retry login failed: $retryMessage")
+                                                motionToastUtil.showFailureToast(
+                                                    this,
+                                                    "Failed to connect to chat: $retryMessage"
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Log.e(TAG, "User creation failed: $createMessage")
+                                    motionToastUtil.showFailureToast(
+                                        this,
+                                        "Failed to setup chat account: $createMessage"
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun launchChatActivity() {
+        // Since ChatActivity requires a specific user, show a helpful message
+        motionToastUtil.showInfoToast(
+            this,
+            "To start a chat, go to a query and click the 'Chat' button to message the query author"
+        )
     }
 }

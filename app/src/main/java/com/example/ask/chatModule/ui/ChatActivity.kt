@@ -8,9 +8,6 @@ import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.databinding.DataBindingUtil
 import com.cometchat.chat.models.User
-import com.cometchat.chatuikit.messagelist.CometChatMessageList
-import com.cometchat.chatuikit.messagecomposer.CometChatMessageComposer
-import com.cometchat.chatuikit.messageheader.CometChatMessageHeader
 import com.example.ask.R
 import com.example.ask.databinding.ActivityChatBinding
 import com.example.ask.chatModule.managers.CometChatManager
@@ -33,9 +30,6 @@ class ChatActivity : BaseActivity() {
         const val EXTRA_USER_AVATAR = "user_avatar"
         const val EXTRA_QUERY_TITLE = "query_title"
 
-        /**
-         * Helper method to start ChatActivity
-         */
         fun startChatActivity(
             context: Context,
             targetUserId: String,
@@ -64,8 +58,8 @@ class ChatActivity : BaseActivity() {
         val queryTitle = intent.getStringExtra(EXTRA_QUERY_TITLE)
 
         if (targetUserId.isNullOrEmpty()) {
-            Log.e(TAG, "Target user ID is null or empty")
-            motionToastUtil.showFailureToast(this, "Invalid user information")
+            Log.e(TAG, "No target user specified for chat")
+            motionToastUtil.showFailureToast(this, "No user selected for chat")
             finish()
             return
         }
@@ -88,35 +82,21 @@ class ChatActivity : BaseActivity() {
             avatar = targetUserAvatar ?: ""
         }
 
-        // Setup Message Header
-        binding.messageHeader.apply {
-            setUser(targetUser)
+        try {
+            // Setup Message Header
+            binding.messageHeader.setUser(targetUser)
 
-            // Set back button click listener - either use the default behavior
-            // or create a custom back button view if needed
-            // For default behavior, you can remove this line as CometChat usually handles it automatically
+            // Setup Message List
+            binding.messageList.setUser(targetUser)
+
+            // Setup Message Composer
+            binding.messageComposer.setUser(targetUser)
+
+            Log.d(TAG, "Chat components setup completed for user: $targetUserId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting up chat components", e)
+            motionToastUtil.showFailureToast(this, "Failed to setup chat")
         }
-
-        // If you need a custom back button, you would need to create a View and set it:
-        /*
-        val backButton = ImageView(this@ChatActivity).apply {
-            setImageResource(R.drawable.ic_arrow_back) // Use your own drawable
-            setOnClickListener { handleBackPress() }
-        }
-        binding.messageHeader.setBackIcon(backButton)
-        */
-
-        // Setup Message List
-        binding.messageList.apply {
-            setUser(targetUser)
-        }
-
-        // Setup Message Composer
-        binding.messageComposer.apply {
-            setUser(targetUser)
-        }
-
-        Log.d(TAG, "Chat components setup completed for user: $targetUserId")
     }
 
     private fun setupToolbar(targetUserName: String?, queryTitle: String?) {
@@ -129,7 +109,7 @@ class ChatActivity : BaseActivity() {
 
         supportActionBar?.title = title
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_arrow_back) // Set your back icon here
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_arrow_back)
         supportActionBar?.setHomeActionContentDescription("Back")
     }
 
