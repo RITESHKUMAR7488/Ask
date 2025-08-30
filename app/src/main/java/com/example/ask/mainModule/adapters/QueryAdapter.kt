@@ -124,8 +124,22 @@ class QueryAdapter(
                 }
 
                 // ✅ Chat button click listener - Updated to launch ChatActivity
+                // Replace the btnChat.setOnClickListener in your setupActionButtons method with this:
+
                 btnChat.setOnClickListener {
                     if (!query.userId.isNullOrEmpty()) {
+                        // ✅ Add CometChat readiness check
+                        if (!com.example.ask.MyApplication.isCometChatInitialized) {
+                            // Show a toast instead of crashing
+                            val toast = android.widget.Toast.makeText(
+                                context,
+                                "Chat service is starting, please wait...",
+                                android.widget.Toast.LENGTH_SHORT
+                            )
+                            toast.show()
+                            return@setOnClickListener
+                        }
+
                         // Use CometChat's user ID format (same as Firebase UID in our case)
                         ChatActivity.startChatActivity(
                             context = context,

@@ -9,15 +9,19 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.ask.MyApplication
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.chatModule.managers.CometChatManager
 import com.example.ask.chatModule.ui.ChatActivity
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
+import com.example.ask.mainModule.uis.activities.MainScreen
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.utilities.BaseFragment
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : BaseFragment() {
@@ -28,6 +32,9 @@ class HomeFragment : BaseFragment() {
     private val addViewModel: AddViewModel by viewModels()
     private val notificationViewModel: NotificationViewModel by viewModels()
     private lateinit var queryAdapter: QueryAdapter
+
+    @Inject
+    lateinit var cometChatManager: CometChatManager
 
     companion object {
         private const val TAG = "HomeFragment"
@@ -233,7 +240,25 @@ class HomeFragment : BaseFragment() {
                 return
             }
 
-            // ✅ Launch ChatActivity with query information
+            // ✅ Check CometChat status before launching chat
+            if (!MyApplication.isCometChatInitialized) {
+                motionToastUtil.showInfoToast(
+                    requireActivity(),
+                    "Chat service is starting, please wait a moment..."
+                )
+                return
+            }
+
+            // Check if current user is logged into CometChat
+            if (!cometChatManager.isCometChatLoggedIn()) {
+                motionToastUtil.showInfoToast(
+                    requireActivity(),
+                    "Connecting to chat, please try again in a moment..."
+                )
+                return
+            }
+
+            // All checks passed, launch ChatActivity
             ChatActivity.startChatActivity(
                 context = requireContext(),
                 targetUserId = query.userId!!,
@@ -241,6 +266,7 @@ class HomeFragment : BaseFragment() {
                 targetUserAvatar = query.userProfileImage,
                 queryTitle = query.title
             )
+
         } else {
             motionToastUtil.showFailureToast(
                 requireActivity(),
