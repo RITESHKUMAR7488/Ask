@@ -6,12 +6,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.ask.onBoardingModule.models.UserModel
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject // ✅ FIXED: Changed from jakarta.inject.Inject
+import javax.inject.Inject
 
 class PreferenceManager @Inject constructor(@ApplicationContext val context: Context) {
-    private var mPreferences: SharedPreferences = context.getSharedPreferences(
+    val mPreferences: SharedPreferences = context.getSharedPreferences(
         Constant.AUTH,
-
         AppCompatActivity.MODE_PRIVATE
     )
 

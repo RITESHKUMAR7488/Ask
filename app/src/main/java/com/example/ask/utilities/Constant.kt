@@ -20,4 +20,8 @@ object Constant {
     const val COMMENTS = "comments"
     const val BASE_URL_IMAGE_UPLOAD = "https://freeimage.host/"
     const val IMAGE_API_KEY="6d207e02198a847aa98d0a2a901485a5"
+
+    // CometChat related constants
+    const val COMETCHAT_INITIALIZED = "cometchat_initialized"
+    const val COMETCHAT_USER_CREATED = "cometchat_user_created"
 }

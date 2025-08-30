@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.chatModule.ui.ChatActivity
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
@@ -221,10 +222,31 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Chat feature coming soon!"
-        )
+        val currentUserId = preferenceManager.userId
+
+        if (!query.userId.isNullOrEmpty()) {
+            if (currentUserId == query.userId) {
+                motionToastUtil.showWarningToast(
+                    requireActivity(),
+                    "You cannot chat with yourself"
+                )
+                return
+            }
+
+            // ✅ Launch ChatActivity with query information
+            ChatActivity.startChatActivity(
+                context = requireContext(),
+                targetUserId = query.userId!!,
+                targetUserName = query.userName,
+                targetUserAvatar = query.userProfileImage,
+                queryTitle = query.title
+            )
+        } else {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Unable to start chat. User information not available."
+            )
+        }
     }
 
     override fun onResume() {
@@ -238,6 +260,7 @@ class HomeFragment : BaseFragment() {
         super.onDestroyView()
         _binding = null
     }
+
     private fun debugCommunityData() {
         val userId = preferenceManager.userId
         Log.d(TAG, "debugCommunityData: Starting debug for userId = $userId")

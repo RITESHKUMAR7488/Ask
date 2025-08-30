@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
+import com.example.ask.chatModule.ui.ChatActivity
 import com.example.ask.databinding.ItemQueryBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -122,9 +123,21 @@ class QueryAdapter(
                     onHelpClick(query)
                 }
 
-                // Chat button click listener
+                // ✅ Chat button click listener - Updated to launch ChatActivity
                 btnChat.setOnClickListener {
-                    onChatClick(query)
+                    if (!query.userId.isNullOrEmpty()) {
+                        // Use CometChat's user ID format (same as Firebase UID in our case)
+                        ChatActivity.startChatActivity(
+                            context = context,
+                            targetUserId = query.userId!!,
+                            targetUserName = query.userName,
+                            targetUserAvatar = query.userProfileImage,
+                            queryTitle = query.title
+                        )
+                    } else {
+                        // Fallback to original callback if user ID is not available
+                        onChatClick(query)
+                    }
                 }
 
                 // Customize button state based on query status
@@ -132,8 +145,9 @@ class QueryAdapter(
                     "RESOLVED", "CLOSED" -> {
                         btnHelp.isEnabled = false
                         btnHelp.alpha = 0.5f
-                        btnChat.isEnabled = false
-                        btnChat.alpha = 0.5f
+                        // Keep chat enabled even for resolved queries for follow-up discussions
+                        btnChat.isEnabled = true
+                        btnChat.alpha = 1.0f
                     }
                     else -> {
                         btnHelp.isEnabled = true

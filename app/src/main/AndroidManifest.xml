@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Required permissions for notification features -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -20,7 +24,14 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- CometChat permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:replace="android:maxSdkVersion" />
 
     <application
         android:name=".MyApplication"
@@ -32,6 +43,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
+
+        <!-- Chat Activity -->
+        <activity
+            android:name=".chatModule.ui.ChatActivity"
+            android:exported="false"
+            android:parentActivityName=".mainModule.uis.activities.MainScreen"
+            android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar"
+            tools:ignore="MissingClass" />
+
         <activity
             android:name=".notificationModule.uis.NotificationActivity"
             android:exported="false" />

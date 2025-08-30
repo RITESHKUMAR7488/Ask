@@ -1,5 +1,6 @@
 package com.example.ask.onBoardingModule.di
 
+import com.example.ask.chatModule.managers.CometChatManager
 import com.example.ask.onBoardingModule.repositories.OnBoardingRepository
 import com.example.ask.onBoardingModule.repositories.OnBoardingRepositoryImpl
 import com.google.firebase.auth.FirebaseAuth
@@ -17,8 +18,9 @@ class OnBoardingModule {
     @Singleton
     fun provideOnBoardingRepository(
         firestore: FirebaseFirestore,
-        auth: FirebaseAuth
-    ):OnBoardingRepository{
-        return OnBoardingRepositoryImpl(firestore,auth)
+        auth: FirebaseAuth,
+        cometChatManager: CometChatManager
+    ): OnBoardingRepository {
+        return OnBoardingRepositoryImpl(firestore, auth, cometChatManager)
     }
 }

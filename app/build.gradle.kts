@@ -70,4 +70,8 @@ dependencies {
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.circleimageview)
 
+    // CometChat dependencies
+    implementation(libs.cometchat.ui.kit)
+    // Optional: Include if using voice/video calling features
+    implementation(libs.cometchat.calls.sdk)
 }

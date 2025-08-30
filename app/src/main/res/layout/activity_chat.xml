@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/white">
+
+        <!-- Message Header -->
+        <com.cometchat.chatuikit.messageheader.CometChatMessageHeader
+            android:id="@+id/messageHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="4dp" />
+
+        <!-- Message List -->
+        <com.cometchat.chatuikit.messagelist.CometChatMessageList
+            android:id="@+id/messageList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Message Composer -->
+        <com.cometchat.chatuikit.messagecomposer.CometChatMessageComposer
+            android:id="@+id/messageComposer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="4dp" />
+
+    </LinearLayout>
+
+</layout>
