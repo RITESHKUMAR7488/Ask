@@ -62,29 +62,22 @@ class ChatRepository @Inject constructor(
             "query_title" to queryTitle
         )
 
-        // Simple channel creation/query without the problematic request parameter
+        // Create QueryChannelRequest with proper configuration
+        val request = QueryChannelRequest().apply {
+            data = extraData
+            members = memberIds // Set members directly in the request
+        }
+
         chatClient.queryChannel(
             channelType = "messaging",
             channelId = channelId,
-            request = QueryChannelRequest().apply {
-                data = extraData
-            }
+            request = request
         ).enqueue { channelResult ->
             when (channelResult) {
                 is Result.Success -> {
                     val channel = channelResult.value
-                    // Add members to the channel if they're not already in it
-                    channel.addMembers(memberIds).enqueue { addMembersResult ->
-                        when (addMembersResult) {
-                            is Result.Success -> {
-                                result(UiState.Success(channelId))
-                            }
-                            is Result.Failure -> {
-                                // Channel was created but adding members failed
-                                result(UiState.Success(channelId)) // Still return success
-                            }
-                        }
-                    }
+                    // Channel created successfully with members already added
+                    result(UiState.Success(channelId))
                 }
                 is Result.Failure -> {
                     result(UiState.Failure(channelResult.value.message ?: "Failed to create/get channel"))
