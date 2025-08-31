@@ -3,6 +3,7 @@ package com.example.ask.mainModule.uis.activities
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import com.example.ask.chatModule.uis.ChatListActivity
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -261,6 +262,10 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                 replaceFragment(HomeFragment(), "Queries")
                 // Update bottom navigation selection
                 binding.bottomNavigationView.selectedItemId = R.id.home
+            }
+            R.id.nav_chats -> {
+                val intent = Intent(this, ChatListActivity::class.java)
+                startActivity(intent)
             }
             R.id.nav_my_queries -> {
                 // TODO: Navigate to My Queries fragment/activity

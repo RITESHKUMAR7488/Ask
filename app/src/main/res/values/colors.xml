@@ -50,4 +50,6 @@
     <!-- Navigation specific colors (if you want different styling) -->
     <color name="nav_header_text">#FFFFFF</color>
     <color name="nav_item_selected">#E3F2FD</color>
+    <color name="white_70">#B3FFFFFF</color>
+
 </resources>

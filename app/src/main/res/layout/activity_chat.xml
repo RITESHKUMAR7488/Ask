@@ -55,8 +55,7 @@
             android:clipToPadding="false"
             android:padding="8dp"
             app:layout_constraintBottom_toTopOf="@+id/messageInputLayout"
-            app:layout_constraintTop_toBottomOf="@+id/toolbar"
-            tools:listitem="@layout/item_message_sent" />
+            app:layout_constraintTop_toBottomOf="@+id/toolbar" />
 
         <!-- Empty State -->
         <TextView
@@ -67,17 +66,6 @@
             android:textAlignment="center"
             android:textColor="@color/gray_500"
             android:textSize="16sp"
-            android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@+id/messageInputLayout"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/toolbar" />
-
-        <!-- Progress Bar -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:visibility="gone"
             app:layout_constraintBottom_toTopOf="@+id/messageInputLayout"
             app:layout_constraintEnd_toEndOf="parent"
@@ -99,10 +87,9 @@
                 android:id="@+id/btnAttachment"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_gravity="center_vertical"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_attach_file"
-                app:tint="@color/gray_600" />
+                android:src="@drawable/ic_attachment"
+                app:tint="@color/primary_color" />
 
             <EditText
                 android:id="@+id/etMessage"
@@ -113,23 +100,31 @@
                 android:layout_weight="1"
                 android:background="@drawable/bg_message_input"
                 android:hint="Type a message..."
-                android:inputType="textMultiLine"
-                android:maxLines="5"
+                android:maxLines="4"
                 android:padding="12dp"
-                android:textColor="@color/black"
-                android:textSize="16sp" />
+                android:textSize="14sp" />
 
             <ImageButton
                 android:id="@+id/btnSend"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_gravity="center_vertical"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:enabled="false"
                 android:src="@drawable/ic_send"
-                app:tint="@color/primary_color" />
+                android:tint="@color/primary_color" />
 
         </LinearLayout>
+
+        <!-- Progress Bar -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

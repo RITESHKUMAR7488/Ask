@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import com.example.ask.chatModule.uis.ChatActivity
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.addModule.models.QueryModel
@@ -221,10 +222,35 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Chat feature coming soon!"
-        )
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        if (currentUser == null || currentUserId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Please login to start a chat"
+            )
+            return
+        }
+
+        // Check if trying to chat with self
+        if (currentUserId == query.userId) {
+            motionToastUtil.showWarningToast(
+                requireActivity(),
+                "You cannot chat with yourself"
+            )
+            return
+        }
+
+        // Navigate to ChatActivity
+        val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+            putExtra(ChatActivity.EXTRA_QUERY_ID, query.queryId)
+            putExtra(ChatActivity.EXTRA_QUERY_TITLE, query.title)
+            putExtra(ChatActivity.EXTRA_RECEIVER_ID, query.userId)
+            putExtra(ChatActivity.EXTRA_RECEIVER_NAME, query.userName)
+            putExtra(ChatActivity.EXTRA_RECEIVER_IMAGE, query.userProfileImage)
+        }
+        startActivity(intent)
     }
 
     override fun onResume() {

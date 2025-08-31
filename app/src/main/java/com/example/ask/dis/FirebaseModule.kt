@@ -6,8 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Inject
-import javax.inject.Singleton
+import javax.inject.Singleton // FIXED: Changed from jakarta.inject to javax.inject
 
 @InstallIn(SingletonComponent::class)
 @Module
