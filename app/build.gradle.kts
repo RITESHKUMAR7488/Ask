@@ -69,5 +69,11 @@ dependencies {
     implementation(libs.glide)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.circleimageview)
+    // Stream Chat SDK - Latest Version
+    implementation(libs.stream.chat.android.ui.components)
+    implementation(libs.stream.chat.android.offline)
+
+    // Additional dependencies for latest version
+    implementation(libs.stream.chat.android.compose)
 
 }

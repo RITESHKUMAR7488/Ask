@@ -12,4 +12,11 @@
         <item name="itemVerticalPadding">12dp</item>
         <item name="itemMaxLines">1</item>
     </style>
+    <style name="StreamUiTheme" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryDark">@color/primary_color</item>
+        <item name="colorAccent">@color/secondary_color</item>
+        <item name="windowActionBar">true</item>
+        <item name="windowNoTitle">false</item>
+    </style>
 </resources>

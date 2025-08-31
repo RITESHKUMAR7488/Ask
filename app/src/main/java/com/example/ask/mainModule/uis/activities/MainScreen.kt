@@ -79,15 +79,17 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         // Setup notification bell
         setupNotificationBell()
 
-        // Observe notification count
+        // Observe notifications
         observeNotifications()
 
         // Setup menu button functionality
         setupMenuButton()
 
+        // Initialize Stream Chat for the logged-in user
+        initializeStreamChat()
+
         // Default fragment = Home
         replaceFragment(HomeFragment(), "Queries")
-
         with(binding) {
             bottomNavigationView.setOnNavigationItemSelectedListener { item ->
                 when (item.itemId) {
@@ -422,5 +424,44 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         super.onDestroy()
         Log.d(TAG, "onDestroy called")
         notificationViewModel.removeNotificationListener()
+    }
+    private fun initializeStreamChat() {
+        val currentUser = preferenceManager.userModel
+        val userId = preferenceManager.userId
+
+        if (currentUser != null && !userId.isNullOrEmpty()) {
+            val chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel by viewModels()
+
+            // Generate a development token (REPLACE in production!)
+            val token = generateDevelopmentToken(userId)
+
+            chatViewModel.connectUserToChat(
+                userId = userId,
+                userName = currentUser.fullName ?: "Unknown User",
+                userEmail = currentUser.email,
+                userImageUrl = currentUser.imageUrl,
+                token = token
+            )
+
+            chatViewModel.userConnection.observe(this) { state ->
+                when (state) {
+                    is UiState.Success -> {
+                        Log.d("MainScreen", "Stream Chat connected successfully")
+                    }
+                    is UiState.Failure -> {
+                        Log.e("MainScreen", "Stream Chat connection failed: ${state.error}")
+                    }
+                    is UiState.Loading -> {
+                        Log.d("MainScreen", "Connecting to Stream Chat...")
+                    }
+                }
+            }
+        }
+    }
+    private fun generateDevelopmentToken(userId: String): String {
+        // For development, get a token from Stream Dashboard:
+        // Go to: Dashboard > Explorer > Chat Explorer > Generate User Token
+        // Replace this with the actual token from your Stream Dashboard
+        return "YOUR_DEVELOPMENT_TOKEN_FROM_STREAM_DASHBOARD"
     }
 }

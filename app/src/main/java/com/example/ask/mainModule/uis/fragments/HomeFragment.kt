@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.chatModule.uis.ChatActivity
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
@@ -221,10 +222,189 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Chat feature coming soon!"
+        val currentUserId = preferenceManager.userId
+        val currentUser = preferenceManager.userModel
+
+        if (currentUserId.isNullOrEmpty() || currentUser == null) {
+            motionToastUtil.showFailureToast(requireActivity(), "Please login to use chat")
+            return
+        }
+
+        // Get ChatViewModel
+        val chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel by viewModels()
+
+        // Check if user is connected to Stream Chat, if not connect first
+        connectUserToChatIfNeeded(currentUserId, currentUser, chatViewModel) {
+            // Create or get channel for this query
+            createQueryChannel(query, currentUserId, chatViewModel)
+        }
+    }
+
+    // Add these new methods to your HomeFragment class
+    private fun connectUserToChatIfNeeded(
+        userId: String,
+        user: com.example.ask.onBoardingModule.models.UserModel,
+        chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel,
+        onSuccess: () -> Unit
+    ) {
+        // Generate development token (replace with backend call in production)
+        val token = generateDevelopmentToken(userId)
+
+        chatViewModel.connectUserToChat(
+            userId = userId,
+            userName = user.fullName ?: "Unknown User",
+            userEmail = user.email,
+            userImageUrl = user.imageUrl,
+            token = token
         )
+
+        // Observe connection result (only once)
+        chatViewModel.userConnection.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    onSuccess()
+                }
+                is UiState.Failure -> {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to connect to chat: ${state.error}"
+                    )
+                }
+                is UiState.Loading -> {
+                    // Show loading if needed
+                }
+            }
+        }
+    }
+
+    private fun createQueryChannel(
+        query: QueryModel,
+        currentUserId: String,
+        chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel
+    ) {
+        val queryOwnerIds = listOfNotNull(query.userId)
+        val helperIds = listOf(currentUserId) // Current user wanting to help
+
+        chatViewModel.createQueryChannel(
+            queryId = query.queryId ?: "",
+            queryTitle = query.title ?: "Query Chat",
+            queryOwnerIds = queryOwnerIds,
+            helperIds = helperIds
+        )
+
+        // Observe channel creation result (only once)
+        chatViewModel.channelCreation.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    val channelId = state.data
+                    val intent = com.example.ask.chatModule.uis.ChatActivity.createIntent(
+                        requireContext(),
+                        channelId,
+                        query.title ?: "Query Chat"
+                    )
+                    startActivity(intent)
+                }
+                is UiState.Failure -> {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to create chat: ${state.error}"
+                    )
+                }
+                is UiState.Loading -> {
+                    motionToastUtil.showInfoToast(requireActivity(), "Creating chat...")
+                }
+            }
+        }
+    }
+
+    /**
+     * Generate a development token for testing
+     * ⚠️ Replace with backend call in production!
+     */
+    private fun generateDevelopmentToken(userId: String): String {
+        // Get this token from Stream Dashboard:
+        // Dashboard > Explorer > Chat Explorer > Generate User Token
+        return "YOUR_DEVELOPMENT_TOKEN_FROM_STREAM_DASHBOARD"
+    }
+
+    private fun connectUserToChatIfNeeded(
+        userId: String,
+        user: com.example.ask.onBoardingModule.models.UserModel,
+        onSuccess: () -> Unit
+    ) {
+        // Generate user token (in production, get this from your backend)
+        val token = generateUserToken(userId) // You'll need to implement this
+
+        val chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel by viewModels()
+
+        chatViewModel.connectUserToChat(
+            userId = userId,
+            userName = user.fullName ?: "Unknown User",
+            userEmail = user.email,
+            userImageUrl = user.imageUrl,
+            token = token
+        )
+
+        chatViewModel.userConnection.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    onSuccess()
+                }
+                is UiState.Failure -> {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to connect to chat: ${state.error}"
+                    )
+                }
+                is UiState.Loading -> {
+                    // Show loading if needed
+                }
+            }
+        }
+    }
+
+    private fun createQueryChannel(query: QueryModel, currentUserId: String) {
+        val chatViewModel: com.example.ask.chatModule.viewModels.ChatViewModel by viewModels()
+
+        val queryOwnerIds = listOfNotNull(query.userId)
+        val helperIds = listOf(currentUserId) // Current user wanting to help
+
+        chatViewModel.createQueryChannel(
+            queryId = query.queryId ?: "",
+            queryTitle = query.title ?: "Query Chat",
+            queryOwnerIds = queryOwnerIds,
+            helperIds = helperIds
+        )
+
+        chatViewModel.channelCreation.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is UiState.Success -> {
+                    val channelId = state.data
+                    val intent = ChatActivity.createIntent(
+                        requireContext(),
+                        channelId,
+                        query.title ?: "Query Chat"
+                    )
+                    startActivity(intent)
+                }
+                is UiState.Failure -> {
+                    motionToastUtil.showFailureToast(
+                        requireActivity(),
+                        "Failed to create chat: ${state.error}"
+                    )
+                }
+                is UiState.Loading -> {
+                    motionToastUtil.showInfoToast(requireActivity(), "Creating chat...")
+                }
+            }
+        }
+    }
+
+    // Temporary token generation (REPLACE with backend call in production)
+    private fun generateUserToken(userId: String): String {
+        // This is just for development - in production, your backend should generate tokens
+        // For now, you can use Stream's development token or implement JWT generation
+        return "YOUR_DEVELOPMENT_TOKEN_HERE"
     }
 
     override fun onResume() {
