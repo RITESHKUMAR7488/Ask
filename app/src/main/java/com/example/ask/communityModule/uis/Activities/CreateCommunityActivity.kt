@@ -28,6 +28,7 @@ class CreateCommunityActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.activity_create_community_acticity)
 

@@ -23,5 +23,17 @@ interface CommunityRepository {
         result: (UiState<CommunityModels>) -> Unit
     )
 
+    fun leaveCommunity(
+        userId: String,
+        communityId: String,
+        result: (UiState<String>) -> Unit
+    )
+
+    fun deleteCommunity(
+        userId: String,
+        communityId: String,
+        result: (UiState<String>) -> Unit
+    )
+
     fun removeCommunityListener()
 }

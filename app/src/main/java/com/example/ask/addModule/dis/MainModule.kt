@@ -17,20 +17,23 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 class MainModule {
+
     @Singleton
     @Provides
     @Named("ImageUploadRetrofit") // ✅ Naming the Retrofit instance for image upload
     fun provideRetroFit(): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(Constant.BASE_URL_IMAGE_UPLOAD)
+            .baseUrl(Constant.BASE_URL_IMAGE_UPLOAD) // ✅ Using your constant
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
+
     @Singleton
     @Provides
     fun provideImageUploadApi(@Named("ImageUploadRetrofit") retrofit: Retrofit): ImageUploadApi {
         return retrofit.create(ImageUploadApi::class.java)
     }
+
     @Provides
     @Singleton
     fun provideRepositoryMain(

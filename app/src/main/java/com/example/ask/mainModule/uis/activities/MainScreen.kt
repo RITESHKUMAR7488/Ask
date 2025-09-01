@@ -20,6 +20,7 @@ import com.example.ask.addModule.uis.ChooseCommunityActivity
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.mainModule.uis.fragments.HomeFragment
+import com.example.ask.mainModule.uis.activities.MyQueriesActivity
 import com.example.ask.notificationModule.uis.NotificationActivity
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
@@ -263,8 +264,9 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                 binding.bottomNavigationView.selectedItemId = R.id.home
             }
             R.id.nav_my_queries -> {
-                // TODO: Navigate to My Queries fragment/activity
-                motionToastUtil.showInfoToast(this, "My Queries - Coming Soon!")
+                // ✅ Navigate to MyQueriesActivity
+                val intent = Intent(this, MyQueriesActivity::class.java)
+                startActivity(intent)
             }
             R.id.nav_communities -> {
                 replaceFragment(CommunityFragment(), "Communities")

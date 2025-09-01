@@ -9,12 +9,12 @@
         android:orientation="vertical"
         android:background="@color/background_color">
 
-        <!-- Toolbar -->
+        <!-- Enhanced Toolbar -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@color/primary_color"
-            android:elevation="4dp"
+            android:layout_height="64dp"
+            android:background="@drawable/toolbar_background"
+            android:elevation="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="16dp"
@@ -24,8 +24,9 @@
                 android:id="@+id/btnBack"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/circular_button_background"
                 android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Go back"
                 app:tint="@color/white" />
 
             <TextView
@@ -36,22 +37,22 @@
                 android:layout_weight="1"
                 android:text="Notifications"
                 android:textColor="@color/white"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
-            <!-- Mark all as read button -->
+            <!-- Enhanced Mark all as read button -->
             <ImageButton
                 android:id="@+id/btnMarkAllRead"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/circular_button_background"
                 android:src="@drawable/ic_done_all"
-                app:tint="@color/white"
-                android:contentDescription="Mark all as read" />
+                android:contentDescription="Mark all as read"
+                app:tint="@color/white" />
 
         </LinearLayout>
 
-        <!-- Content -->
+        <!-- Content with enhanced styling -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipeRefreshLayout"
             android:layout_width="match_parent"
@@ -68,19 +69,38 @@
                     android:layout_height="match_parent"
                     tools:listitem="@layout/item_notification"
                     android:clipToPadding="false"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="16dp" />
+                    android:paddingTop="12dp"
+                    android:paddingBottom="16dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:overScrollMode="never" />
 
-                <!-- Progress Bar -->
-                <ProgressBar
-                    android:id="@+id/progressBar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:visibility="gone"
-                    android:indeterminateTint="@color/primary_color" />
+                <!-- Enhanced Progress Bar -->
+                <LinearLayout
+                    android:id="@+id/layoutLoading"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-                <!-- Empty State -->
+                    <ProgressBar
+                        android:id="@+id/progressBar"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:indeterminateTint="@color/primary_color" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Loading notifications..."
+                        android:textColor="@color/gray_600"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+                <!-- Enhanced Empty State -->
                 <LinearLayout
                     android:id="@+id/layoutEmptyState"
                     android:layout_width="match_parent"
@@ -94,32 +114,44 @@
                         android:id="@+id/ivEmptyState"
                         android:layout_width="120dp"
                         android:layout_height="120dp"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginBottom="24dp"
                         android:src="@drawable/ic_notification"
                         app:tint="@color/gray_400" />
+
+                    <TextView
+                        android:id="@+id/tvEmptyTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="🔕 No notifications yet"
+                        android:textColor="@color/gray_600"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvEmptyMessage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:gravity="center"
-                        android:text="No notifications yet"
-                        android:textColor="@color/gray_600"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:text="When someone offers to help with your queries or responds to your posts, you'll see notifications here."
+                        android:textColor="@color/gray_500"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="2dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="16dp"
                         android:gravity="center"
-                        android:text="When someone requests help or responds to your queries, you'll see notifications here."
-                        android:textColor="@color/gray_500"
-                        android:textSize="14sp" />
+                        android:text="💡 Tip: Post a query to start getting help from the community!"
+                        android:textColor="@color/primary_color"
+                        android:textSize="12sp"
+                        android:textStyle="italic" />
 
                 </LinearLayout>
 
-                <!-- Error State -->
+                <!-- Enhanced Error State -->
                 <LinearLayout
                     android:id="@+id/layoutError"
                     android:layout_width="match_parent"
@@ -132,27 +164,38 @@
                     <ImageView
                         android:layout_width="120dp"
                         android:layout_height="120dp"
-                        android:layout_marginBottom="16dp"
-                        android:src="@drawable/ic_errror"
+                        android:layout_marginBottom="24dp"
+                        android:src="@drawable/ic_error"
                         app:tint="@color/error_color" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="😔 Something went wrong"
+                        android:textColor="@color/error_color"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvError"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
-                        android:text="Something went wrong"
-                        android:textColor="@color/error_color"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:text="Failed to load notifications"
+                        android:textColor="@color/gray_600"
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnRetry"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Retry"
-                        app:cornerRadius="8dp" />
+                        android:layout_marginTop="24dp"
+                        android:text="🔄 Try Again"
+                        android:textColor="@color/white"
+                        android:backgroundTint="@color/primary_color"
+                        app:cornerRadius="12dp" />
 
                 </LinearLayout>
 

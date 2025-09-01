@@ -20,5 +20,11 @@ interface RepositoryQuery {
 
     fun getAllQueries(result: (UiState<List<QueryModel>>) -> Unit)
 
+    // ✅ NEW: Get queries from user's joined communities only
+    fun getQueriesFromUserCommunities(userId: String, result: (UiState<List<QueryModel>>) -> Unit)
+
     fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit)
+    fun deleteQuery(queryId: String, result: (UiState<String>) -> Unit)
+
+
 }

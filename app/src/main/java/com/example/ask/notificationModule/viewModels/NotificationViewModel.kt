@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.ask.notificationModule.models.NotificationModel
 import com.example.ask.notificationModule.repositories.NotificationRepository
+import com.example.ask.notificationModule.repositories.NotificationRepositoryImpl
 import com.example.ask.notificationModule.utils.NotificationUtils
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +29,7 @@ class NotificationViewModel @Inject constructor(
     val markAsRead: LiveData<UiState<String>> = _markAsRead
 
     /**
-     * ✅ NEW: Send help notification with contact details
+     * ✅ IMPROVED: Send help notification with contact details
      */
     fun sendHelpNotification(
         targetUserId: String,
@@ -164,10 +165,32 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    fun markNotificationAsRead(notificationId: String) {
-        _markAsRead.value = UiState.Loading
-        repository.markNotificationAsRead(notificationId) {
-            _markAsRead.value = it
+    /**
+     * ✅ IMPROVED: Better mark as read with userId
+     */
+    fun markNotificationAsRead(userId: String, notificationId: String) {
+        if (repository is NotificationRepositoryImpl) {
+            repository.markNotificationAsRead(userId, notificationId) {
+                _markAsRead.value = it
+            }
+        } else {
+            // Fallback to original method
+            repository.markNotificationAsRead(notificationId) {
+                _markAsRead.value = it
+            }
+        }
+    }
+
+    /**
+     * ✅ NEW: Mark all notifications as read
+     */
+    fun markAllNotificationsAsRead(userId: String) {
+        if (repository is NotificationRepositoryImpl) {
+            repository.markAllNotificationsAsRead(userId) {
+                _markAsRead.value = it
+                // Refresh notifications after marking all as read
+                getUserNotifications(userId)
+            }
         }
     }
 

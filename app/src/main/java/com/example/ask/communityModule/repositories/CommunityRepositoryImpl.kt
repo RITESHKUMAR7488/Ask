@@ -162,6 +162,83 @@ class CommunityRepositoryImpl @Inject constructor(
             }
     }
 
+    override fun leaveCommunity(
+        userId: String,
+        communityId: String,
+        result: (UiState<String>) -> Unit
+    ) {
+        result(UiState.Loading)
+
+        // Remove user from their communities collection
+        firestore.collection(Constant.USERS).document(userId)
+            .collection(Constant.MY_COMMUNITIES)
+            .document(communityId)
+            .delete()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    result.invoke(UiState.Success("Left community successfully"))
+                } else {
+                    result.invoke(UiState.Failure(task.exception?.localizedMessage ?: "Failed to leave community"))
+                }
+            }
+            .addOnFailureListener { exception ->
+                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to leave community"))
+            }
+    }
+
+    override fun deleteCommunity(
+        userId: String,
+        communityId: String,
+        result: (UiState<String>) -> Unit
+    ) {
+        result(UiState.Loading)
+
+        // First, verify that the user is an admin of this community
+        firestore.collection(Constant.USERS).document(userId)
+            .collection(Constant.MY_COMMUNITIES)
+            .document(communityId)
+            .get()
+            .addOnCompleteListener { checkTask ->
+                if (checkTask.isSuccessful && checkTask.result.exists()) {
+                    val userCommunity = checkTask.result.toObject(CommunityModels::class.java)
+                    if (userCommunity?.role?.lowercase() == "admin") {
+
+                        // First delete the community from the main communities collection
+                        firestore.collection(Constant.COMMUNITIES).document(communityId)
+                            .delete()
+                            .addOnCompleteListener { deleteTask ->
+                                if (deleteTask.isSuccessful) {
+                                    // Then delete from user's communities
+                                    firestore.collection(Constant.USERS).document(userId)
+                                        .collection(Constant.MY_COMMUNITIES)
+                                        .document(communityId)
+                                        .delete()
+                                        .addOnCompleteListener { userDeleteTask ->
+                                            if (userDeleteTask.isSuccessful) {
+                                                result.invoke(UiState.Success("Community deleted successfully"))
+                                            } else {
+                                                result.invoke(UiState.Failure("Community deleted but failed to update user data"))
+                                            }
+                                        }
+                                } else {
+                                    result.invoke(UiState.Failure(deleteTask.exception?.localizedMessage ?: "Failed to delete community"))
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to delete community"))
+                            }
+                    } else {
+                        result.invoke(UiState.Failure("Only admins can delete communities"))
+                    }
+                } else {
+                    result.invoke(UiState.Failure("Community membership not found"))
+                }
+            }
+            .addOnFailureListener { exception ->
+                result.invoke(UiState.Failure(exception.localizedMessage ?: "Error verifying permissions"))
+            }
+    }
+
     override fun removeCommunityListener() {
         communityListener?.remove()
         communityListener = null
