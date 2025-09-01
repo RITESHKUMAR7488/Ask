@@ -35,6 +35,9 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
     private val notificationViewModel: NotificationViewModel by viewModels()
     private lateinit var toggle: ActionBarDrawerToggle
 
+    // ✅ Add variable to track current fragment
+    private var currentFragmentTag = "home"
+
     companion object {
         private const val TAG = "MainScreen"
     }
@@ -87,24 +90,31 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         setupMenuButton()
 
         // Default fragment = Home
-        replaceFragment(HomeFragment(), "Queries")
+        replaceFragment(HomeFragment(), "Queries", "home")
 
+        // ✅ FIXED: Bottom navigation setup with proper fragment management
         with(binding) {
-            bottomNavigationView.setOnNavigationItemSelectedListener { item ->
+            bottomNavigationView.setOnItemSelectedListener { item ->
                 when (item.itemId) {
+                    R.id.home -> {
+                        if (currentFragmentTag != "home") {
+                            replaceFragment(HomeFragment(), "Queries", "home")
+                        }
+                        true
+                    }
                     R.id.Add -> {
                         val intent = Intent(this@MainScreen, ChooseCommunityActivity::class.java)
                         startActivity(intent)
-                        true
+                        // Don't change fragment, keep current selection
+                        false // Return false so selection doesn't change
                     }
                     R.id.community -> {
-                        replaceFragment(CommunityFragment(), "Communities")
+                        if (currentFragmentTag != "community") {
+                            replaceFragment(CommunityFragment(), "Communities", "community")
+                        }
                         true
                     }
-                    else -> {
-                        replaceFragment(HomeFragment(), "Queries")
-                        true
-                    }
+                    else -> false
                 }
             }
         }
@@ -234,9 +244,6 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
             // Navigate to NotificationActivity
             val intent = Intent(this, NotificationActivity::class.java)
             startActivity(intent)
-
-            // Show feedback
-            motionToastUtil.showInfoToast(this, "Opening notifications...")
         }
     }
 
@@ -259,7 +266,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.nav_home -> {
-                replaceFragment(HomeFragment(), "Queries")
+                replaceFragment(HomeFragment(), "Queries", "home")
                 // Update bottom navigation selection
                 binding.bottomNavigationView.selectedItemId = R.id.home
             }
@@ -272,7 +279,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                 motionToastUtil.showInfoToast(this, "My Queries - Coming Soon!")
             }
             R.id.nav_communities -> {
-                replaceFragment(CommunityFragment(), "Communities")
+                replaceFragment(CommunityFragment(), "Communities", "community")
                 // Update bottom navigation selection
                 binding.bottomNavigationView.selectedItemId = R.id.community
             }
@@ -382,7 +389,6 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
 
                 // Force visibility and bring to front
                 notificationBadge.bringToFront()
-
             } else {
                 Log.d(TAG, "Hiding badge (count is 0)")
                 notificationBadge.visibility = View.GONE
@@ -398,13 +404,21 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         binding.toolbarTitle.text = title
     }
 
-    private fun replaceFragment(fragment: Fragment, title: String) {
-        val fragmentTransaction = supportFragmentManager.beginTransaction()
-        fragmentTransaction.replace(R.id.frameLayout, fragment)
-        fragmentTransaction.addToBackStack(null)
-        fragmentTransaction.commit()
+    // ✅ FIXED: Updated replaceFragment method with tag tracking
+    private fun replaceFragment(fragment: Fragment, title: String, tag: String) {
+        // Only replace if it's a different fragment
+        if (currentFragmentTag != tag) {
+            val fragmentTransaction = supportFragmentManager.beginTransaction()
+            fragmentTransaction.replace(R.id.frameLayout, fragment, tag)
 
-        // Update toolbar title dynamically
+            // ✅ IMPORTANT: Don't add to backstack for main navigation
+            // fragmentTransaction.addToBackStack(null) // Commented out
+
+            fragmentTransaction.commit()
+            currentFragmentTag = tag
+        }
+
+        // Update toolbar title
         binding.toolbarTitle.text = title
     }
 
@@ -412,7 +426,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         super.onResume()
         Log.d(TAG, "onResume called")
 
-        // Refresh notification count when activity resumes
+        // ✅ IMPORTANT: Refresh notification count when activity resumes
         val userId = preferenceManager.userId
         if (!userId.isNullOrEmpty()) {
             Log.d(TAG, "Refreshing notification count for user: $userId")

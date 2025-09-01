@@ -2,6 +2,7 @@ package com.example.ask.chatModule.uis
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -22,6 +23,10 @@ class ChatListActivity : BaseActivity() {
     private lateinit var binding: ActivityChatListBinding
     private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var chatListAdapter: ChatListAdapter
+
+    companion object {
+        private const val TAG = "ChatListActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,6 +94,15 @@ class ChatListActivity : BaseActivity() {
                     } else {
                         binding.layoutEmptyState.visibility = View.GONE
                         binding.recyclerViewChats.visibility = View.VISIBLE
+
+                        // ✅ Log chat data for debugging
+                        Log.d(TAG, "Loaded ${state.data.size} chats")
+                        state.data.forEach { chat ->
+                            val currentUserId = preferenceManager.userId ?: ""
+                            val unreadCount = chat.unreadCount?.get(currentUserId) ?: 0
+                            Log.d(TAG, "Chat: ${chat.queryTitle}, Unread: $unreadCount, LastMessage: ${chat.lastMessage}")
+                        }
+
                         chatListAdapter.submitList(state.data)
                     }
                 }
@@ -99,6 +113,7 @@ class ChatListActivity : BaseActivity() {
                     binding.tvEmptyMessage.text = "Failed to load chats.\nPull down to refresh."
 
                     motionToastUtil.showFailureToast(this, "Failed to load chats: ${state.error}")
+                    Log.e(TAG, "Failed to load chats: ${state.error}")
                 }
             }
         }
@@ -106,11 +121,14 @@ class ChatListActivity : BaseActivity() {
 
     private fun loadUserChats() {
         val userId = preferenceManager.userId
+        Log.d(TAG, "Loading chats for user: $userId")
+
         if (!userId.isNullOrEmpty()) {
             chatViewModel.getUserChats(userId)
         } else {
             motionToastUtil.showFailureToast(this, "User not logged in")
             binding.swipeRefreshLayout.isRefreshing = false
+            Log.e(TAG, "User ID is null or empty")
         }
     }
 
@@ -121,6 +139,8 @@ class ChatListActivity : BaseActivity() {
         val otherUserId = chat.participants?.find { it != currentUserId }
         val otherUserName = chat.participantNames?.get(otherUserId)
         val otherUserImage = chat.participantImages?.get(otherUserId)
+
+        Log.d(TAG, "Opening chat: ${chat.chatId} with ${otherUserName}")
 
         val intent = Intent(this, ChatActivity::class.java).apply {
             putExtra(ChatActivity.EXTRA_CHAT_ID, chat.chatId)
@@ -135,6 +155,7 @@ class ChatListActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d(TAG, "onResume - refreshing chats")
         loadUserChats()
     }
 }

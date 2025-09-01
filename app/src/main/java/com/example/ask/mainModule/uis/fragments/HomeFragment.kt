@@ -242,6 +242,14 @@ class HomeFragment : BaseFragment() {
             return
         }
 
+        // ✅ Add loading feedback
+        motionToastUtil.showInfoToast(
+            requireActivity(),
+            "Starting chat with ${query.userName}..."
+        )
+
+        Log.d(TAG, "Starting chat - Query: ${query.queryId}, Receiver: ${query.userId} (${query.userName})")
+
         // Navigate to ChatActivity
         val intent = Intent(requireContext(), ChatActivity::class.java).apply {
             putExtra(ChatActivity.EXTRA_QUERY_ID, query.queryId)
@@ -250,20 +258,36 @@ class HomeFragment : BaseFragment() {
             putExtra(ChatActivity.EXTRA_RECEIVER_NAME, query.userName)
             putExtra(ChatActivity.EXTRA_RECEIVER_IMAGE, query.userProfileImage)
         }
-        startActivity(intent)
+
+        try {
+            startActivity(intent)
+            Log.d(TAG, "Chat activity started successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start chat activity", e)
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Failed to start chat. Please try again."
+            )
+        }
     }
 
     override fun onResume() {
         super.onResume()
         (activity as? AppCompatActivity)?.supportActionBar?.title = "Community Queries"
         Log.d(TAG, "onResume: Refreshing queries")
-        loadQueries()
+
+        // ✅ Only reload if fragment is visible and has been created
+        if (isVisible && view != null) {
+            loadQueries()
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Log.d(TAG, "onDestroyView called")
         _binding = null
     }
+
     private fun debugCommunityData() {
         val userId = preferenceManager.userId
         Log.d(TAG, "debugCommunityData: Starting debug for userId = $userId")

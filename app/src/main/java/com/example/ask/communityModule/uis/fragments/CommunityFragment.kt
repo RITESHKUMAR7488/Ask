@@ -13,6 +13,7 @@ import com.example.ask.R
 import com.example.ask.communityModule.adapters.MyCommunityAdapter
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActivity
+import com.example.ask.communityModule.uis.Activities.JoinCommunity
 import com.example.ask.communityModule.uis.CommunityActivity
 import com.example.ask.communityModule.viewModels.CommunityViewModel
 import com.example.ask.databinding.FragmentCommunityBinding
@@ -61,7 +62,7 @@ class CommunityFragment : BaseFragment() {
 
     private fun setupClickListeners() {
         binding.btnAdd.setOnClickListener {
-            val intent = Intent(requireContext(), CreateCommunityActivity::class.java)
+            val intent = Intent(requireContext(), JoinCommunity::class.java)
             startActivity(intent)
         }
 

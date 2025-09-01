@@ -31,20 +31,28 @@ class ChatRepositoryImpl @Inject constructor(
     ) {
         result.invoke(UiState.Loading)
 
-        // Check if chat already exists for this query with these participants
+        // ✅ FIXED: Better query to find existing chat
+        // Check if chat already exists for this query with these exact participants
         firestore.collection(CHATS_COLLECTION)
             .whereEqualTo("queryId", queryId)
-            .whereArrayContainsAny("participants", participantIds)
+            .whereEqualTo("isActive", true)
             .get()
             .addOnSuccessListener { documents ->
-                if (!documents.isEmpty) {
-                    // Chat exists, return it
-                    val existingChat = documents.documents[0].toObject(ChatModel::class.java)
-                    if (existingChat != null) {
-                        result.invoke(UiState.Success(existingChat))
-                    } else {
-                        result.invoke(UiState.Failure("Failed to parse existing chat"))
+                var existingChat: ChatModel? = null
+
+                // Check if any existing chat has the same participants
+                for (document in documents) {
+                    val chat = document.toObject(ChatModel::class.java)
+                    if (chat.participants?.containsAll(participantIds) == true &&
+                        participantIds.containsAll(chat.participants ?: emptyList())) {
+                        existingChat = chat
+                        break
                     }
+                }
+
+                if (existingChat != null) {
+                    Log.d(TAG, "Found existing chat: ${existingChat.chatId}")
+                    result.invoke(UiState.Success(existingChat))
                 } else {
                     // Create new chat
                     val chatId = firestore.collection(CHATS_COLLECTION).document().id
@@ -101,7 +109,15 @@ class ChatRepositoryImpl @Inject constructor(
                 if (snapshot != null) {
                     val chats = snapshot.documents.mapNotNull { doc ->
                         doc.toObject(ChatModel::class.java)
+                    }.filter { chat ->
+                        // ✅ Filter out chats where lastMessageTime is null and put them at the end
+                        chat.lastMessageTime != null
+                    } + snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(ChatModel::class.java)
+                    }.filter { chat ->
+                        chat.lastMessageTime == null
                     }
+
                     Log.d(TAG, "Retrieved ${chats.size} chats for user: $userId")
                     result.invoke(UiState.Success(chats))
                 } else {
@@ -126,6 +142,8 @@ class ChatRepositoryImpl @Inject constructor(
         message.chatId = chatId
         message.timestamp = System.currentTimeMillis()
 
+        Log.d(TAG, "Sending message: ${message.message} from ${message.senderName} (${message.senderId})")
+
         // Add message to messages subcollection
         firestore.collection(CHATS_COLLECTION)
             .document(chatId)
@@ -133,40 +151,55 @@ class ChatRepositoryImpl @Inject constructor(
             .document(messageId)
             .set(message)
             .addOnSuccessListener {
-                // Update chat's last message info
-                val updates = hashMapOf<String, Any>(
-                    "lastMessage" to (message.message ?: ""),
-                    "lastMessageTime" to (message.timestamp ?: System.currentTimeMillis()),
-                    "lastMessageSenderId" to (message.senderId ?: "")
-                )
+                Log.d(TAG, "Message saved to Firestore successfully")
 
-                // Increment unread count for all participants except sender
+                // Update chat's last message info and unread counts
                 firestore.collection(CHATS_COLLECTION)
                     .document(chatId)
                     .get()
                     .addOnSuccessListener { document ->
                         val chat = document.toObject(ChatModel::class.java)
                         if (chat != null) {
+                            // ✅ FIXED: Properly update unread count for all participants except sender
                             val newUnreadCount = chat.unreadCount?.toMutableMap() ?: mutableMapOf()
+
                             chat.participants?.forEach { participantId ->
                                 if (participantId != message.senderId) {
-                                    newUnreadCount[participantId] = (newUnreadCount[participantId] ?: 0) + 1
+                                    val currentCount = newUnreadCount[participantId] ?: 0
+                                    newUnreadCount[participantId] = currentCount + 1
+                                    Log.d(TAG, "Updated unread count for $participantId: ${newUnreadCount[participantId]}")
+                                } else {
+                                    // Reset sender's unread count to 0
+                                    newUnreadCount[participantId] = 0
                                 }
                             }
-                            updates["unreadCount"] = newUnreadCount
-                        }
 
-                        firestore.collection(CHATS_COLLECTION)
-                            .document(chatId)
-                            .update(updates)
-                            .addOnSuccessListener {
-                                Log.d(TAG, "Message sent successfully")
-                                result.invoke(UiState.Success("Message sent"))
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e(TAG, "Failed to update chat", e)
-                                result.invoke(UiState.Failure(e.localizedMessage ?: "Failed to update chat"))
-                            }
+                            val updates = hashMapOf<String, Any>(
+                                "lastMessage" to (message.message ?: ""),
+                                "lastMessageTime" to (message.timestamp ?: System.currentTimeMillis()),
+                                "lastMessageSenderId" to (message.senderId ?: ""),
+                                "unreadCount" to newUnreadCount
+                            )
+
+                            firestore.collection(CHATS_COLLECTION)
+                                .document(chatId)
+                                .update(updates)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "Chat updated successfully with unread counts: $newUnreadCount")
+                                    result.invoke(UiState.Success("Message sent"))
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e(TAG, "Failed to update chat", e)
+                                    result.invoke(UiState.Failure(e.localizedMessage ?: "Failed to update chat"))
+                                }
+                        } else {
+                            Log.e(TAG, "Chat document not found")
+                            result.invoke(UiState.Failure("Chat not found"))
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Failed to get chat document", e)
+                        result.invoke(UiState.Failure(e.localizedMessage ?: "Failed to get chat"))
                     }
             }
             .addOnFailureListener { e ->
@@ -176,6 +209,8 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override fun getMessages(chatId: String): Flow<List<MessageModel>> = callbackFlow {
+        Log.d(TAG, "Setting up messages listener for chat: $chatId")
+
         val listener = firestore.collection(CHATS_COLLECTION)
             .document(chatId)
             .collection(MESSAGES_COLLECTION)
@@ -192,28 +227,40 @@ class ChatRepositoryImpl @Inject constructor(
                         doc.toObject(MessageModel::class.java)
                     }
                     Log.d(TAG, "Retrieved ${messages.size} messages for chat: $chatId")
+
+                    // ✅ Log each message for debugging
+                    messages.forEach { message ->
+                        Log.d(TAG, "Message: ${message.message} from ${message.senderName} at ${message.timestamp}")
+                    }
+
                     trySend(messages)
                 } else {
+                    Log.d(TAG, "No messages snapshot received")
                     trySend(emptyList())
                 }
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "Removing messages listener for chat: $chatId")
+            listener.remove()
+        }
     }
 
     override fun markMessagesAsRead(chatId: String, userId: String) {
-        // Reset unread count for this user
+        Log.d(TAG, "Marking messages as read for user: $userId in chat: $chatId")
+
+        // ✅ FIXED: Reset unread count for this user
         firestore.collection(CHATS_COLLECTION)
             .document(chatId)
             .update("unreadCount.$userId", 0)
             .addOnSuccessListener {
-                Log.d(TAG, "Messages marked as read for user: $userId")
+                Log.d(TAG, "Unread count reset successfully for user: $userId")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to mark messages as read", e)
+                Log.e(TAG, "Failed to reset unread count", e)
             }
 
-        // Mark individual messages as read
+        // ✅ Mark individual messages as read (for message status indicators)
         firestore.collection(CHATS_COLLECTION)
             .document(chatId)
             .collection(MESSAGES_COLLECTION)
@@ -221,9 +268,19 @@ class ChatRepositoryImpl @Inject constructor(
             .whereNotEqualTo("senderId", userId)
             .get()
             .addOnSuccessListener { documents ->
+                Log.d(TAG, "Found ${documents.size()} unread messages to mark as read")
                 documents.forEach { doc ->
                     doc.reference.update("isRead", true)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Marked message ${doc.id} as read")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Failed to mark message ${doc.id} as read", e)
+                        }
                 }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to get unread messages", e)
             }
     }
 
