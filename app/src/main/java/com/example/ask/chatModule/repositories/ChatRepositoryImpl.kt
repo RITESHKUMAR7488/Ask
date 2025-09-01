@@ -9,7 +9,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import javax.inject.Inject // IMPORTANT: Using javax.inject, not jakarta.inject
+import javax.inject.Inject // ✅ CRITICAL FIX: Using javax.inject instead of jakarta.inject
 
 class ChatRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -31,8 +31,7 @@ class ChatRepositoryImpl @Inject constructor(
     ) {
         result.invoke(UiState.Loading)
 
-        // ✅ FIXED: Better query to find existing chat
-        // Check if chat already exists for this query with these exact participants
+        // First, try to find an existing chat for this query with these participants
         firestore.collection(CHATS_COLLECTION)
             .whereEqualTo("queryId", queryId)
             .whereEqualTo("isActive", true)
@@ -43,6 +42,8 @@ class ChatRepositoryImpl @Inject constructor(
                 // Check if any existing chat has the same participants
                 for (document in documents) {
                     val chat = document.toObject(ChatModel::class.java)
+                    chat.chatId = document.id // Ensure chatId is set
+
                     if (chat.participants?.containsAll(participantIds) == true &&
                         participantIds.containsAll(chat.participants ?: emptyList())) {
                         existingChat = chat
@@ -98,7 +99,6 @@ class ChatRepositoryImpl @Inject constructor(
         firestore.collection(CHATS_COLLECTION)
             .whereArrayContains("participants", userId)
             .whereEqualTo("isActive", true)
-            .orderBy("lastMessageTime", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e(TAG, "Failed to get user chats", error)
@@ -108,14 +108,12 @@ class ChatRepositoryImpl @Inject constructor(
 
                 if (snapshot != null) {
                     val chats = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(ChatModel::class.java)
-                    }.filter { chat ->
-                        // ✅ Filter out chats where lastMessageTime is null and put them at the end
-                        chat.lastMessageTime != null
-                    } + snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(ChatModel::class.java)
-                    }.filter { chat ->
-                        chat.lastMessageTime == null
+                        doc.toObject(ChatModel::class.java)?.apply {
+                            chatId = doc.id // Ensure chatId is set
+                        }
+                    }.sortedByDescending { chat ->
+                        // Sort by lastMessageTime, putting chats with messages first
+                        chat.lastMessageTime ?: 0L
                     }
 
                     Log.d(TAG, "Retrieved ${chats.size} chats for user: $userId")
@@ -160,7 +158,7 @@ class ChatRepositoryImpl @Inject constructor(
                     .addOnSuccessListener { document ->
                         val chat = document.toObject(ChatModel::class.java)
                         if (chat != null) {
-                            // ✅ FIXED: Properly update unread count for all participants except sender
+                            // Update unread count for all participants except sender
                             val newUnreadCount = chat.unreadCount?.toMutableMap() ?: mutableMapOf()
 
                             chat.participants?.forEach { participantId ->
@@ -224,11 +222,13 @@ class ChatRepositoryImpl @Inject constructor(
 
                 if (snapshot != null) {
                     val messages = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(MessageModel::class.java)
+                        doc.toObject(MessageModel::class.java)?.apply {
+                            messageId = doc.id // Ensure messageId is set
+                        }
                     }
                     Log.d(TAG, "Retrieved ${messages.size} messages for chat: $chatId")
 
-                    // ✅ Log each message for debugging
+                    // Log each message for debugging
                     messages.forEach { message ->
                         Log.d(TAG, "Message: ${message.message} from ${message.senderName} at ${message.timestamp}")
                     }
@@ -249,7 +249,7 @@ class ChatRepositoryImpl @Inject constructor(
     override fun markMessagesAsRead(chatId: String, userId: String) {
         Log.d(TAG, "Marking messages as read for user: $userId in chat: $chatId")
 
-        // ✅ FIXED: Reset unread count for this user
+        // Reset unread count for this user
         firestore.collection(CHATS_COLLECTION)
             .document(chatId)
             .update("unreadCount.$userId", 0)
@@ -260,7 +260,7 @@ class ChatRepositoryImpl @Inject constructor(
                 Log.e(TAG, "Failed to reset unread count", e)
             }
 
-        // ✅ Mark individual messages as read (for message status indicators)
+        // Mark individual messages as read (for message status indicators)
         firestore.collection(CHATS_COLLECTION)
             .document(chatId)
             .collection(MESSAGES_COLLECTION)

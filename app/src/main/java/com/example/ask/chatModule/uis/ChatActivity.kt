@@ -16,6 +16,7 @@ import com.example.ask.chatModule.models.ChatModel
 import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.databinding.ActivityChatBinding
 import com.example.ask.utilities.BaseActivity
+import com.example.ask.utilities.ChatDebugUtility
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -46,7 +47,9 @@ class ChatActivity : BaseActivity() {
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.activity_chat)
 
+        // Initialize everything first
         extractIntentData()
+        validateData()
         setupViews()
         setupRecyclerView()
         setupObservers()
@@ -55,10 +58,10 @@ class ChatActivity : BaseActivity() {
         // Check if we have an existing chat ID or need to create/get one
         val chatId = intent.getStringExtra(EXTRA_CHAT_ID)
         if (chatId != null) {
-            // Load existing chat
+            Log.d(TAG, "Loading existing chat with ID: $chatId")
             loadChat(chatId)
         } else {
-            // Create or get chat
+            Log.d(TAG, "Creating or getting chat")
             createOrGetChat()
         }
     }
@@ -68,7 +71,45 @@ class ChatActivity : BaseActivity() {
         receiverName = intent.getStringExtra(EXTRA_RECEIVER_NAME)
         receiverImage = intent.getStringExtra(EXTRA_RECEIVER_IMAGE)
 
-        Log.d(TAG, "Receiver: $receiverName (ID: $receiverId)")
+        Log.d(TAG, "=== INTENT DATA ===")
+        Log.d(TAG, "QueryId: ${intent.getStringExtra(EXTRA_QUERY_ID)}")
+        Log.d(TAG, "QueryTitle: ${intent.getStringExtra(EXTRA_QUERY_TITLE)}")
+        Log.d(TAG, "ReceiverId: $receiverId")
+        Log.d(TAG, "ReceiverName: $receiverName")
+        Log.d(TAG, "ReceiverImage: $receiverImage")
+        Log.d(TAG, "ChatId: ${intent.getStringExtra(EXTRA_CHAT_ID)}")
+    }
+
+    private fun validateData() {
+        // Validate current user data
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        Log.d(TAG, "=== CURRENT USER DATA ===")
+        Log.d(TAG, "UserId: $currentUserId")
+        Log.d(TAG, "UserName: ${currentUser?.fullName}")
+        Log.d(TAG, "UserEmail: ${currentUser?.email}")
+
+        if (currentUser == null || currentUserId.isNullOrEmpty()) {
+            Log.e(TAG, "Current user data is invalid")
+            motionToastUtil.showFailureToast(this, "User not logged in")
+            finish()
+            return
+        }
+
+        if (receiverId.isNullOrEmpty()) {
+            Log.e(TAG, "Receiver ID is empty")
+            motionToastUtil.showFailureToast(this, "Invalid receiver")
+            finish()
+            return
+        }
+
+        if (currentUserId == receiverId) {
+            Log.e(TAG, "Cannot chat with yourself")
+            motionToastUtil.showFailureToast(this, "Cannot chat with yourself")
+            finish()
+            return
+        }
     }
 
     private fun setupViews() {
@@ -86,6 +127,8 @@ class ChatActivity : BaseActivity() {
 
     private fun setupRecyclerView() {
         val currentUserId = preferenceManager.userId ?: ""
+        Log.d(TAG, "Setting up RecyclerView with currentUserId: $currentUserId")
+
         messageAdapter = MessageAdapter(
             context = this,
             currentUserId = currentUserId,
@@ -110,23 +153,28 @@ class ChatActivity : BaseActivity() {
         chatViewModel.createChatState.observe(this) { state ->
             when (state) {
                 is UiState.Loading -> {
+                    Log.d(TAG, "Chat creation loading...")
                     binding.progressBar.visibility = View.VISIBLE
                 }
                 is UiState.Success -> {
                     binding.progressBar.visibility = View.GONE
                     currentChat = state.data
-                    Log.d(TAG, "Chat created/retrieved: ${state.data.chatId}")
+                    Log.d(TAG, "✅ Chat created/retrieved successfully: ${state.data.chatId}")
+                    Log.d(TAG, "Chat details: $currentChat")
 
                     // Start loading messages
                     state.data.chatId?.let { chatId ->
                         loadMessages(chatId)
                         markMessagesAsRead(chatId)
+
+                        // Debug chat data
+                        ChatDebugUtility.debugChatData(chatId, preferenceManager.userId ?: "")
                     }
                 }
                 is UiState.Failure -> {
                     binding.progressBar.visibility = View.GONE
                     motionToastUtil.showFailureToast(this, "Failed to start chat: ${state.error}")
-                    Log.e(TAG, "Failed to create/get chat: ${state.error}")
+                    Log.e(TAG, "❌ Failed to create/get chat: ${state.error}")
                 }
             }
         }
@@ -134,12 +182,19 @@ class ChatActivity : BaseActivity() {
         // Observe messages
         lifecycleScope.launch {
             chatViewModel.messagesFlow.collect { messages ->
-                Log.d(TAG, "Received ${messages.size} messages")
-                messageAdapter.submitList(messages)
+                Log.d(TAG, "📨 Received ${messages.size} messages from Flow")
 
-                // Scroll to bottom when new message arrives
                 if (messages.isNotEmpty()) {
-                    binding.recyclerViewMessages.smoothScrollToPosition(messages.size - 1)
+                    messages.forEach { msg ->
+                        Log.d(TAG, "Message: ${msg.message} from ${msg.senderName} (${msg.senderId})")
+                    }
+                }
+
+                messageAdapter.submitList(messages) {
+                    // Callback when list is submitted
+                    if (messages.isNotEmpty()) {
+                        binding.recyclerViewMessages.smoothScrollToPosition(messages.size - 1)
+                    }
                 }
 
                 // Show/hide empty state
@@ -157,16 +212,27 @@ class ChatActivity : BaseActivity() {
         chatViewModel.sendMessageState.observe(this) { state ->
             when (state) {
                 is UiState.Loading -> {
+                    Log.d(TAG, "Sending message...")
                     binding.btnSend.isEnabled = false
                 }
                 is UiState.Success -> {
+                    Log.d(TAG, "✅ Message sent successfully")
                     binding.btnSend.isEnabled = true
                     binding.etMessage.text?.clear()
+
+                    // Debug to verify message was sent
+                    currentChat?.chatId?.let { chatId ->
+                        ChatDebugUtility.debugMessageSending(
+                            chatId,
+                            binding.etMessage.text.toString(),
+                            preferenceManager.userId ?: ""
+                        )
+                    }
                 }
                 is UiState.Failure -> {
+                    Log.e(TAG, "❌ Failed to send message: ${state.error}")
                     binding.btnSend.isEnabled = true
                     motionToastUtil.showFailureToast(this, "Failed to send message")
-                    Log.e(TAG, "Failed to send message: ${state.error}")
                 }
             }
         }
@@ -194,10 +260,16 @@ class ChatActivity : BaseActivity() {
         val currentUser = preferenceManager.userModel ?: return
 
         if (receiverId == null) {
+            Log.e(TAG, "Receiver ID is null")
             motionToastUtil.showFailureToast(this, "Invalid receiver")
             finish()
             return
         }
+
+        Log.d(TAG, "=== CREATING/GETTING CHAT ===")
+        Log.d(TAG, "QueryId: $queryId")
+        Log.d(TAG, "QueryTitle: $queryTitle")
+        Log.d(TAG, "Participants: [$currentUserId, $receiverId]")
 
         val participantIds = listOf(currentUserId, receiverId!!)
         val participantNames = mapOf(
@@ -209,6 +281,9 @@ class ChatActivity : BaseActivity() {
             receiverId!! to (receiverImage ?: "")
         )
 
+        Log.d(TAG, "ParticipantNames: $participantNames")
+        Log.d(TAG, "ParticipantImages: $participantImages")
+
         chatViewModel.createOrGetChat(
             queryId = queryId,
             queryTitle = queryTitle,
@@ -219,27 +294,53 @@ class ChatActivity : BaseActivity() {
     }
 
     private fun loadChat(chatId: String) {
+        Log.d(TAG, "Loading chat with ID: $chatId")
         loadMessages(chatId)
         markMessagesAsRead(chatId)
+
+        // Debug existing chat
+        ChatDebugUtility.debugChatData(chatId, preferenceManager.userId ?: "")
     }
 
     private fun loadMessages(chatId: String) {
-        Log.d(TAG, "Loading messages for chat: $chatId")
+        Log.d(TAG, "📬 Loading messages for chat: $chatId")
         chatViewModel.loadMessages(chatId)
     }
 
     private fun markMessagesAsRead(chatId: String) {
         val currentUserId = preferenceManager.userId ?: return
+        Log.d(TAG, "Marking messages as read for user: $currentUserId in chat: $chatId")
         chatViewModel.markMessagesAsRead(chatId, currentUserId)
     }
 
     private fun sendMessage() {
         val message = binding.etMessage.text.toString().trim()
-        if (message.isEmpty()) return
+        if (message.isEmpty()) {
+            Log.w(TAG, "Attempted to send empty message")
+            return
+        }
 
-        val chatId = currentChat?.chatId ?: return
-        val currentUser = preferenceManager.userModel ?: return
-        val currentUserId = preferenceManager.userId ?: return
+        val chatId = currentChat?.chatId
+        if (chatId == null) {
+            Log.e(TAG, "Cannot send message - chat ID is null")
+            motionToastUtil.showFailureToast(this, "Chat not initialized")
+            return
+        }
+
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        if (currentUser == null || currentUserId == null) {
+            Log.e(TAG, "Cannot send message - user data is null")
+            motionToastUtil.showFailureToast(this, "User not logged in")
+            return
+        }
+
+        Log.d(TAG, "=== SENDING MESSAGE ===")
+        Log.d(TAG, "ChatId: $chatId")
+        Log.d(TAG, "SenderId: $currentUserId")
+        Log.d(TAG, "SenderName: ${currentUser.fullName}")
+        Log.d(TAG, "Message: $message")
 
         chatViewModel.sendMessage(
             chatId = chatId,
@@ -294,5 +395,10 @@ class ChatActivity : BaseActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "ChatActivity destroyed")
     }
 }
