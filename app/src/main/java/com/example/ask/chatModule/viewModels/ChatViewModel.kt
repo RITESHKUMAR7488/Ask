@@ -1,4 +1,3 @@
-// File: app/src/main/java/com/example/ask/chatModule/viewModels/ChatViewModel.kt
 package com.example.ask.chatModule.viewModels
 
 import android.util.Log

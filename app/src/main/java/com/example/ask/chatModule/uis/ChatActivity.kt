@@ -1,18 +1,19 @@
+// File: app/src/main/java/com/example/ask/chatModule/uis/ChatActivity.kt
 package com.example.ask.chatModule.uis
 
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.chatModule.adapters.ChatAdapter
 import com.example.ask.chatModule.models.ChatModel
+import com.example.ask.chatModule.models.ChatRoomModel
 import com.example.ask.chatModule.viewModels.ChatViewModel
 import com.example.ask.databinding.ActivityChatBinding
 import com.example.ask.utilities.BaseActivity
@@ -26,10 +27,8 @@ class ChatActivity : BaseActivity() {
     private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var chatAdapter: ChatAdapter
 
-    private var chatRoomId: String? = null
+    private var currentChatRoom: ChatRoomModel? = null
     private var queryModel: QueryModel? = null
-    private val currentUserId by lazy { preferenceManager.userId }
-    private val currentUser by lazy { preferenceManager.userModel }
 
     companion object {
         private const val TAG = "ChatActivity"
@@ -40,74 +39,46 @@ class ChatActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize data binding
         binding = DataBindingUtil.setContentView(this, R.layout.activity_chat)
 
-        // Apply window insets
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        // Get query from intent
+        queryModel = intent.getParcelableExtra(EXTRA_QUERY)
+
+        if (queryModel == null) {
+            motionToastUtil.showFailureToast(this, "Invalid query data")
+            finish()
+            return
         }
 
-        // Get query data from intent
-        getIntentData()
-
-        // Setup UI components
         setupUI()
         setupRecyclerView()
         setupClickListeners()
         observeViewModel()
-
-        // Initialize or get chat room
-        initializeChatRoom()
-    }
-
-    private fun getIntentData() {
-        queryModel = intent.getParcelableExtra(EXTRA_QUERY)
-        Log.d(TAG, "getIntentData: Received query - ${queryModel?.title}")
-
-        if (queryModel == null) {
-            Log.e(TAG, "getIntentData: No query data received")
-            motionToastUtil.showFailureToast(this, "Error: No query data received")
-            finish()
-            return
-        }
-
-        if (currentUserId.isNullOrEmpty() || currentUser == null) {
-            Log.e(TAG, "getIntentData: Current user data is missing")
-            motionToastUtil.showFailureToast(this, "Error: User not logged in")
-            finish()
-            return
-        }
+        createOrJoinChatRoom()
+        setupBackPressHandling()
     }
 
     private fun setupUI() {
-        queryModel?.let { query ->
-            with(binding) {
-                // Set chat title
-                tvChatTitle.text = "Chat about: ${query.title}"
+        with(binding) {
+            // Set toolbar title to query title
+            tvChatTitle.text = queryModel?.title ?: "Chat"
+            tvQueryTitle.text = queryModel?.title
+            tvQueryDescription.text = queryModel?.description
 
-                // Set query info
-                tvQueryTitle.text = query.title
-                tvQueryDescription.text = query.description
-                tvQueryOwner.text = "Query by: ${query.userName}"
-            }
+            // Show query owner info
+            tvQueryOwner.text = "Query by: ${queryModel?.userName}"
         }
     }
 
     private fun setupRecyclerView() {
-        if (currentUserId.isNullOrEmpty()) {
-            Log.e(TAG, "setupRecyclerView: Current user ID is null")
-            return
-        }
+        val currentUserId = preferenceManager.userId ?: ""
 
         chatAdapter = ChatAdapter(
             context = this,
-            currentUserId = currentUserId!!
+            currentUserId = currentUserId
         )
 
-        with(binding.recyclerViewMessages) {
+        binding.recyclerViewMessages.apply {
             layoutManager = LinearLayoutManager(this@ChatActivity).apply {
                 stackFromEnd = true // Start from bottom
             }
@@ -128,54 +99,125 @@ class ChatActivity : BaseActivity() {
                 sendMessage()
             }
 
-            // Send on enter key (optional)
-            etMessage.setOnEditorActionListener { _, actionId, _ ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) {
-                    sendMessage()
-                    true
-                } else {
-                    false
-                }
+            // Send message on enter key (if needed)
+            etMessage.setOnEditorActionListener { _, _, _ ->
+                sendMessage()
+                true
             }
         }
     }
 
+    private fun setupBackPressHandling() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Mark messages as read before leaving
+                currentChatRoom?.let { room ->
+                    val userId = preferenceManager.userId
+                    if (!userId.isNullOrEmpty()) {
+                        chatViewModel.markMessagesAsRead(room.chatRoomId!!, userId)
+                    }
+                }
+
+                // Close activity
+                finish()
+            }
+        })
+    }
+
+    private fun createOrJoinChatRoom() {
+        val query = queryModel ?: return
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        if (currentUser == null || currentUserId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(this, "Please login to chat")
+            finish()
+            return
+        }
+
+        if (query.userId.isNullOrEmpty()) {
+            motionToastUtil.showFailureToast(this, "Invalid query owner")
+            finish()
+            return
+        }
+
+        Log.d(TAG, "Creating/joining chat room for query: ${query.queryId}")
+
+        chatViewModel.createOrGetChatRoom(
+            queryId = query.queryId ?: "",
+            queryTitle = query.title ?: "",
+            queryOwnerId = query.userId!!,
+            queryOwnerName = query.userName ?: "Unknown User",
+            currentUserId = currentUserId,
+            currentUserName = currentUser.fullName ?: "Unknown User"
+        )
+    }
+
+    private fun sendMessage() {
+        val messageText = binding.etMessage.text.toString().trim()
+
+        if (messageText.isBlank()) {
+            motionToastUtil.showWarningToast(this, "Please enter a message")
+            return
+        }
+
+        val chatRoom = currentChatRoom ?: run {
+            motionToastUtil.showFailureToast(this, "Chat room not ready")
+            return
+        }
+
+        val currentUser = preferenceManager.userModel ?: run {
+            motionToastUtil.showFailureToast(this, "User not logged in")
+            return
+        }
+
+        val currentUserId = preferenceManager.userId ?: run {
+            motionToastUtil.showFailureToast(this, "User ID not found")
+            return
+        }
+
+        Log.d(TAG, "Sending message: $messageText")
+
+        chatViewModel.sendMessage(
+            chatRoomId = chatRoom.chatRoomId!!,
+            messageText = messageText,
+            senderId = currentUserId,
+            senderName = currentUser.fullName ?: "Unknown User",
+            senderImageUrl = currentUser.imageUrl
+        )
+
+        // Clear input field
+        binding.etMessage.text?.clear()
+    }
+
     private fun observeViewModel() {
-        // Observe chat room creation/retrieval
+        // Observe chat room creation
         chatViewModel.chatRoom.observe(this) { state ->
+            Log.d(TAG, "Chat room state: $state")
+
             when (state) {
                 is UiState.Loading -> {
-                    Log.d(TAG, "observeViewModel: Loading chat room...")
-                    showProgress(true)
+                    binding.progressBar.visibility = View.VISIBLE
+                    binding.layoutChat.visibility = View.GONE
                 }
 
                 is UiState.Success -> {
-                    Log.d(TAG, "observeViewModel: Chat room ready - ${state.data.chatRoomId}")
-                    chatRoomId = state.data.chatRoomId
-                    showProgress(false)
-                    showChatLayout(true)
+                    binding.progressBar.visibility = View.GONE
+                    binding.layoutChat.visibility = View.VISIBLE
+
+                    currentChatRoom = state.data
+                    Log.d(TAG, "Chat room ready: ${state.data.chatRoomId}")
+
+                    // Load initial messages
+                    chatViewModel.loadMessages(state.data.chatRoomId!!)
                 }
 
                 is UiState.Failure -> {
-                    Log.e(TAG, "observeViewModel: Failed to create/get chat room - ${state.error}")
-                    showProgress(false)
-                    motionToastUtil.showFailureToast(this, "Failed to initialize chat: ${state.error}")
-                    finish()
-                }
-            }
-        }
+                    binding.progressBar.visibility = View.GONE
+                    binding.layoutChat.visibility = View.VISIBLE
 
-        // Observe real-time messages
-        chatViewModel.realTimeMessages.observe(this) { messages ->
-            Log.d(TAG, "observeViewModel: Received ${messages.size} real-time messages")
-
-            if (messages.isEmpty()) {
-                showEmptyState(true)
-            } else {
-                showEmptyState(false)
-                chatAdapter.submitList(messages) {
-                    // Scroll to bottom after messages are updated
-                    binding.recyclerViewMessages.scrollToPosition(messages.size - 1)
+                    Log.e(TAG, "Failed to create/get chat room: ${state.error}")
+                    motionToastUtil.showFailureToast(this, "Failed to join chat: ${state.error}")
                 }
             }
         }
@@ -184,21 +226,53 @@ class ChatActivity : BaseActivity() {
         chatViewModel.sendMessage.observe(this) { state ->
             when (state) {
                 is UiState.Loading -> {
-                    Log.d(TAG, "observeViewModel: Sending message...")
                     binding.btnSend.isEnabled = false
                 }
 
                 is UiState.Success -> {
-                    Log.d(TAG, "observeViewModel: Message sent successfully")
                     binding.btnSend.isEnabled = true
-                    binding.etMessage.text?.clear()
+                    Log.d(TAG, "Message sent successfully")
+
+                    // Scroll to bottom after sending
+                    scrollToBottom()
                 }
 
                 is UiState.Failure -> {
-                    Log.e(TAG, "observeViewModel: Failed to send message - ${state.error}")
                     binding.btnSend.isEnabled = true
-                    motionToastUtil.showFailureToast(this, "Failed to send message: ${state.error}")
+                    Log.e(TAG, "Failed to send message: ${state.error}")
+                    motionToastUtil.showFailureToast(this, "Failed to send message")
                 }
+            }
+        }
+
+        // Observe initial message loading
+        chatViewModel.messages.observe(this) { state ->
+            when (state) {
+                is UiState.Loading -> {
+                    Log.d(TAG, "Loading messages...")
+                }
+
+                is UiState.Success -> {
+                    Log.d(TAG, "Initial messages loaded: ${state.data.size}")
+                    chatAdapter.submitList(state.data)
+                    scrollToBottom()
+                }
+
+                is UiState.Failure -> {
+                    Log.e(TAG, "Failed to load messages: ${state.error}")
+                    motionToastUtil.showFailureToast(this, "Failed to load messages")
+                }
+            }
+        }
+
+        // Observe real-time message updates
+        chatViewModel.realTimeMessages.observe(this) { messages ->
+            Log.d(TAG, "Real-time messages update: ${messages.size}")
+            chatAdapter.submitList(messages)
+
+            // Auto-scroll to bottom when new messages arrive
+            if (messages.isNotEmpty()) {
+                scrollToBottom()
             }
         }
 
@@ -206,111 +280,41 @@ class ChatActivity : BaseActivity() {
         chatViewModel.markAsRead.observe(this) { state ->
             when (state) {
                 is UiState.Success -> {
-                    Log.d(TAG, "observeViewModel: Messages marked as read")
+                    Log.d(TAG, "Messages marked as read")
                 }
+
                 is UiState.Failure -> {
-                    Log.e(TAG, "observeViewModel: Failed to mark messages as read - ${state.error}")
+                    Log.e(TAG, "Failed to mark messages as read: ${state.error}")
                 }
+
                 is UiState.Loading -> {
-                    // Loading state for mark as read
+                    // Handle loading if needed
                 }
             }
         }
     }
 
-    private fun initializeChatRoom() {
-        val query = queryModel
-        val user = currentUser
-        val userId = currentUserId
-
-        if (query == null || user == null || userId.isNullOrEmpty()) {
-            Log.e(TAG, "initializeChatRoom: Missing required data")
-            motionToastUtil.showFailureToast(this, "Error: Missing user or query data")
-            finish()
-            return
-        }
-
-        Log.d(TAG, "initializeChatRoom: Creating/getting chat room for query ${query.queryId}")
-
-        chatViewModel.createOrGetChatRoom(
-            queryId = query.queryId ?: "",
-            queryTitle = query.title ?: "Unknown Query",
-            queryOwnerId = query.userId ?: "",
-            queryOwnerName = query.userName ?: "Unknown User",
-            currentUserId = userId,
-            currentUserName = user.fullName ?: "Unknown User"
-        )
-    }
-
-    private fun sendMessage() {
-        val messageText = binding.etMessage.text?.toString()?.trim()
-
-        if (messageText.isNullOrEmpty()) {
-            motionToastUtil.showWarningToast(this, "Please enter a message")
-            return
-        }
-
-        val roomId = chatRoomId
-        val user = currentUser
-        val userId = currentUserId
-
-        if (roomId.isNullOrEmpty() || user == null || userId.isNullOrEmpty()) {
-            Log.e(TAG, "sendMessage: Missing required data")
-            motionToastUtil.showFailureToast(this, "Error: Chat not initialized properly")
-            return
-        }
-
-        Log.d(TAG, "sendMessage: Sending message - $messageText")
-
-        chatViewModel.sendMessage(
-            chatRoomId = roomId,
-            messageText = messageText,
-            senderId = userId,
-            senderName = user.fullName ?: "Unknown User",
-            senderImageUrl = user.imageUrl
-        )
-    }
-
-    private fun showProgress(show: Boolean) {
-        with(binding) {
-            if (show) {
-                progressBar.visibility = View.VISIBLE
-                layoutChat.visibility = View.GONE
-            } else {
-                progressBar.visibility = View.GONE
-            }
-        }
-    }
-
-    private fun showChatLayout(show: Boolean) {
-        binding.layoutChat.visibility = if (show) View.VISIBLE else View.GONE
-    }
-
-    private fun showEmptyState(show: Boolean) {
-        with(binding) {
-            if (show) {
-                layoutEmptyChat.visibility = View.VISIBLE
-                recyclerViewMessages.visibility = View.GONE
-            } else {
-                layoutEmptyChat.visibility = View.GONE
-                recyclerViewMessages.visibility = View.VISIBLE
+    private fun scrollToBottom() {
+        if (chatAdapter.itemCount > 0) {
+            binding.recyclerViewMessages.post {
+                binding.recyclerViewMessages.smoothScrollToPosition(chatAdapter.itemCount - 1)
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Mark messages as read when user opens the chat
-        chatRoomId?.let { roomId ->
-            currentUserId?.let { userId ->
-                chatViewModel.markMessagesAsRead(roomId, userId)
+        // Mark messages as read when activity resumes
+        currentChatRoom?.let { room ->
+            val userId = preferenceManager.userId
+            if (!userId.isNullOrEmpty()) {
+                chatViewModel.markMessagesAsRead(room.chatRoomId!!, userId)
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy: Cleaning up listeners")
-        // ViewModel will handle cleanup in onCleared()
+        Log.d(TAG, "ChatActivity destroyed")
     }
 }

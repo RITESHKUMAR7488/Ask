@@ -221,10 +221,77 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Chat feature coming soon!"
-        )
+        val currentUserId = preferenceManager.userId
+        val currentUser = preferenceManager.userModel
+
+        Log.d(TAG, "Chat clicked for query: ${query.title}")
+
+        // Validation checks
+        when {
+            currentUserId.isNullOrEmpty() -> {
+                motionToastUtil.showFailureToast(
+                    requireActivity(),
+                    "Please login to start chatting"
+                )
+                return
+            }
+
+            currentUser == null -> {
+                motionToastUtil.showFailureToast(
+                    requireActivity(),
+                    "User profile not found. Please login again."
+                )
+                return
+            }
+
+            query.userId.isNullOrEmpty() -> {
+                motionToastUtil.showFailureToast(
+                    requireActivity(),
+                    "Cannot start chat: Query owner information missing"
+                )
+                return
+            }
+
+            query.queryId.isNullOrEmpty() -> {
+                motionToastUtil.showFailureToast(
+                    requireActivity(),
+                    "Cannot start chat: Query ID missing"
+                )
+                return
+            }
+
+            currentUserId == query.userId -> {
+                motionToastUtil.showWarningToast(
+                    requireActivity(),
+                    "You cannot chat with yourself about your own query"
+                )
+                return
+            }
+        }
+
+        // All validations passed, navigate to ChatActivity
+        Log.d(TAG, "Navigating to ChatActivity for query: ${query.queryId}")
+
+        try {
+            val intent = Intent(requireActivity(), com.example.ask.chatModule.uis.ChatActivity::class.java).apply {
+                putExtra(com.example.ask.chatModule.uis.ChatActivity.EXTRA_QUERY, query)
+            }
+
+            startActivity(intent)
+
+            // Show feedback to user
+            motionToastUtil.showInfoToast(
+                requireActivity(),
+                "Opening chat with ${query.userName}..."
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting ChatActivity", e)
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Failed to open chat. Please try again."
+            )
+        }
     }
 
     override fun onResume() {

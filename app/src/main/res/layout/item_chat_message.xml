@@ -157,8 +157,8 @@
                         android:layout_height="12dp"
                         android:layout_marginStart="4dp"
                         android:src="@drawable/ic_check"
-                        android:visibility="visible"
-                        app:tint="@color/success_color" />
+                        android:tint="@color/success_color"
+                        android:visibility="visible" />
 
                 </LinearLayout>
 
