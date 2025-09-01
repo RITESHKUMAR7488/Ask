@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -13,6 +12,7 @@ import com.example.ask.R
 import com.example.ask.communityModule.adapters.MyCommunityAdapter
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActivity
+import com.example.ask.communityModule.uis.Activities.JoinCommunity
 import com.example.ask.communityModule.uis.CommunityActivity
 import com.example.ask.communityModule.viewModels.CommunityViewModel
 import com.example.ask.databinding.FragmentCommunityBinding
@@ -60,13 +60,38 @@ class CommunityFragment : BaseFragment() {
     }
 
     private fun setupClickListeners() {
+        // ✅ Updated: Show bottom sheet options when add button is clicked
         binding.btnAdd.setOnClickListener {
-            val intent = Intent(requireContext(), CreateCommunityActivity::class.java)
-            startActivity(intent)
+            showAddCommunityOptionsBottomSheet()
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
             loadUserCommunities()
+        }
+    }
+
+    // ✅ New method: Show bottom sheet with Create/Join options
+    private fun showAddCommunityOptionsBottomSheet() {
+        val bottomSheetView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.bottom_sheet_community_options, null)
+
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        bottomSheetDialog.setContentView(bottomSheetView)
+        bottomSheetDialog.show()
+
+        val btnCreateCommunity = bottomSheetView.findViewById<View>(R.id.btnCreateCommunity)
+        val btnJoinCommunity = bottomSheetView.findViewById<View>(R.id.btnJoinCommunity)
+
+        btnCreateCommunity.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(requireContext(), CreateCommunityActivity::class.java)
+            startActivity(intent)
+        }
+
+        btnJoinCommunity.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            val intent = Intent(requireContext(), JoinCommunity::class.java)
+            startActivity(intent)
         }
     }
 
