@@ -35,23 +35,30 @@ class RepositoryQueryImpl @Inject constructor(
         val requestFile = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
         val body = MultipartBody.Part.createFormData("source", imageFile.name, requestFile)
 
-        imageUploadApi.uploadImage(apiKey, "upload", body).enqueue(object : Callback<ImageUploadResponse> {
-            override fun onResponse(call: Call<ImageUploadResponse>, response: Response<ImageUploadResponse>) {
-                if (response.isSuccessful && response.body() != null) {
-                    data.postValue(response.body())
-                } else {
-                    error.postValue(Throwable("Image upload failed: ${response.message()}"))
+        imageUploadApi.uploadImage(apiKey, "upload", body)
+            .enqueue(object : Callback<ImageUploadResponse> {
+                override fun onResponse(
+                    call: Call<ImageUploadResponse>,
+                    response: Response<ImageUploadResponse>
+                ) {
+                    if (response.isSuccessful && response.body() != null) {
+                        data.postValue(response.body())
+                    } else {
+                        error.postValue(Throwable("Image upload failed: ${response.message()}"))
+                    }
                 }
-            }
 
-            override fun onFailure(call: Call<ImageUploadResponse>, t: Throwable) {
-                error.postValue(t)
-            }
-        })
+                override fun onFailure(call: Call<ImageUploadResponse>, t: Throwable) {
+                    error.postValue(t)
+                }
+            })
     }
 
     override fun addQuery(queryModel: QueryModel, result: (UiState<String>) -> Unit) {
-        Log.d(TAG, "addQuery: Starting with communityId=${queryModel.communityId}, communityName=${queryModel.communityName}")
+        Log.d(
+            TAG,
+            "addQuery: Starting with communityId=${queryModel.communityId}, communityName=${queryModel.communityName}"
+        )
 
         val queryId = database.collection(Constant.POSTS).document().id
         queryModel.queryId = queryId
@@ -68,7 +75,10 @@ class RepositoryQueryImpl @Inject constructor(
             .document(queryId)
             .set(queryModel)
             .addOnSuccessListener {
-                Log.d(TAG, "addQuery: Successfully added query $queryId to community ${queryModel.communityName}")
+                Log.d(
+                    TAG,
+                    "addQuery: Successfully added query $queryId to community ${queryModel.communityName}"
+                )
                 result.invoke(UiState.Success("Query added successfully to ${queryModel.communityName}"))
             }
             .addOnFailureListener { exception ->
@@ -91,7 +101,11 @@ class RepositoryQueryImpl @Inject constructor(
             }
             .addOnFailureListener { exception ->
                 Log.e(TAG, "getUserQueries: Failed", exception)
-                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch queries"))
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to fetch queries"
+                    )
+                )
             }
     }
 
@@ -108,14 +122,24 @@ class RepositoryQueryImpl @Inject constructor(
             }
             .addOnFailureListener { exception ->
                 Log.e(TAG, "getAllQueries: Failed", exception)
-                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch queries"))
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to fetch queries"
+                    )
+                )
             }
     }
 
     // ✅ ENHANCED with detailed logging
-    override fun getQueriesFromUserCommunities(userId: String, result: (UiState<List<QueryModel>>) -> Unit) {
+    override fun getQueriesFromUserCommunities(
+        userId: String,
+        result: (UiState<List<QueryModel>>) -> Unit
+    ) {
         Log.d(TAG, "getQueriesFromUserCommunities: Starting for userId=$userId")
-        Log.d(TAG, "getQueriesFromUserCommunities: Looking in collection path: ${Constant.USERS}/$userId/${Constant.MY_COMMUNITIES}")
+        Log.d(
+            TAG,
+            "getQueriesFromUserCommunities: Looking in collection path: ${Constant.USERS}/$userId/${Constant.MY_COMMUNITIES}"
+        )
 
         // First, get the user's joined communities
         database.collection(Constant.USERS)
@@ -123,17 +147,26 @@ class RepositoryQueryImpl @Inject constructor(
             .collection(Constant.MY_COMMUNITIES)
             .get()
             .addOnSuccessListener { communityDocs ->
-                Log.d(TAG, "getQueriesFromUserCommunities: Found ${communityDocs.size()} community documents")
+                Log.d(
+                    TAG,
+                    "getQueriesFromUserCommunities: Found ${communityDocs.size()} community documents"
+                )
 
                 // Log each community document
                 communityDocs.documents.forEachIndexed { index, doc ->
-                    Log.d(TAG, "getQueriesFromUserCommunities: Community $index - ID: ${doc.id}, Data: ${doc.data}")
+                    Log.d(
+                        TAG,
+                        "getQueriesFromUserCommunities: Community $index - ID: ${doc.id}, Data: ${doc.data}"
+                    )
                 }
 
                 // Extract community IDs from user's joined communities
                 val communityIds = communityDocs.documents.mapNotNull { doc ->
                     val communityId = doc.getString("communityId")
-                    Log.d(TAG, "getQueriesFromUserCommunities: Extracted communityId: $communityId from document ${doc.id}")
+                    Log.d(
+                        TAG,
+                        "getQueriesFromUserCommunities: Extracted communityId: $communityId from document ${doc.id}"
+                    )
                     communityId
                 }.filter { it.isNotEmpty() }
 
@@ -146,18 +179,35 @@ class RepositoryQueryImpl @Inject constructor(
                 }
 
                 // Now get queries from these communities
-                Log.d(TAG, "getQueriesFromUserCommunities: Fetching queries from ${communityIds.size} communities")
+                Log.d(
+                    TAG,
+                    "getQueriesFromUserCommunities: Fetching queries from ${communityIds.size} communities"
+                )
                 fetchQueriesFromCommunities(communityIds, result)
             }
             .addOnFailureListener { exception ->
-                Log.e(TAG, "getQueriesFromUserCommunities: Failed to fetch user communities", exception)
-                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch user communities"))
+                Log.e(
+                    TAG,
+                    "getQueriesFromUserCommunities: Failed to fetch user communities",
+                    exception
+                )
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to fetch user communities"
+                    )
+                )
             }
     }
 
     // ✅ Enhanced with logging
-    private fun fetchQueriesFromCommunities(communityIds: List<String>, result: (UiState<List<QueryModel>>) -> Unit) {
-        Log.d(TAG, "fetchQueriesFromCommunities: Searching for queries with communityIds: $communityIds")
+    private fun fetchQueriesFromCommunities(
+        communityIds: List<String>,
+        result: (UiState<List<QueryModel>>) -> Unit
+    ) {
+        Log.d(
+            TAG,
+            "fetchQueriesFromCommunities: Searching for queries with communityIds: $communityIds"
+        )
 
         database.collection(Constant.POSTS)
             .whereIn("communityId", communityIds)
@@ -167,25 +217,41 @@ class RepositoryQueryImpl @Inject constructor(
                 Log.d(TAG, "fetchQueriesFromCommunities: Found ${queryDocs.size()} query documents")
 
                 val queries = queryDocs.toObjects(QueryModel::class.java)
-                Log.d(TAG, "fetchQueriesFromCommunities: Converted to ${queries.size} QueryModel objects")
+                Log.d(
+                    TAG,
+                    "fetchQueriesFromCommunities: Converted to ${queries.size} QueryModel objects"
+                )
 
                 // Log each query for debugging
                 queries.forEachIndexed { index, query ->
-                    Log.d(TAG, "fetchQueriesFromCommunities: Query $index - ID: ${query.queryId}, Title: ${query.title}, CommunityId: ${query.communityId}, CommunityName: ${query.communityName}")
+                    Log.d(
+                        TAG,
+                        "fetchQueriesFromCommunities: Query $index - ID: ${query.queryId}, Title: ${query.title}, CommunityId: ${query.communityId}, CommunityName: ${query.communityName}"
+                    )
                 }
 
                 val filteredQueries = queries.filter { !it.communityId.isNullOrBlank() }
-                Log.d(TAG, "fetchQueriesFromCommunities: After filtering: ${filteredQueries.size} queries")
+                Log.d(
+                    TAG,
+                    "fetchQueriesFromCommunities: After filtering: ${filteredQueries.size} queries"
+                )
 
                 result.invoke(UiState.Success(filteredQueries))
             }
             .addOnFailureListener { exception ->
                 Log.e(TAG, "fetchQueriesFromCommunities: Failed to fetch queries", exception)
-                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to fetch community queries"
+                    )
+                )
             }
     }
 
-    private fun fetchQueriesInChunks(communityIds: List<String>, result: (UiState<List<QueryModel>>) -> Unit) {
+    private fun fetchQueriesInChunks(
+        communityIds: List<String>,
+        result: (UiState<List<QueryModel>>) -> Unit
+    ) {
         Log.d(TAG, "fetchQueriesInChunks: Handling ${communityIds.size} communities in chunks")
 
         val allQueries = mutableListOf<QueryModel>()
@@ -207,23 +273,37 @@ class RepositoryQueryImpl @Inject constructor(
                         allQueries.addAll(queries)
                         completedChunks++
 
-                        Log.d(TAG, "fetchQueriesInChunks: Completed chunk $completedChunks/${chunks.size}, found ${queries.size} queries")
+                        Log.d(
+                            TAG,
+                            "fetchQueriesInChunks: Completed chunk $completedChunks/${chunks.size}, found ${queries.size} queries"
+                        )
 
                         if (completedChunks == chunks.size) {
                             val sortedQueries = allQueries.sortedByDescending { it.timestamp ?: 0 }
-                            Log.d(TAG, "fetchQueriesInChunks: All chunks completed, returning ${sortedQueries.size} total queries")
+                            Log.d(
+                                TAG,
+                                "fetchQueriesInChunks: All chunks completed, returning ${sortedQueries.size} total queries"
+                            )
                             result.invoke(UiState.Success(sortedQueries))
                         }
                     }
                 }
                 .addOnFailureListener { exception ->
                     Log.e(TAG, "fetchQueriesInChunks: Failed on chunk", exception)
-                    result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to fetch community queries"))
+                    result.invoke(
+                        UiState.Failure(
+                            exception.localizedMessage ?: "Failed to fetch community queries"
+                        )
+                    )
                 }
         }
     }
 
-    override fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit) {
+    override fun updateQueryStatus(
+        queryId: String,
+        status: String,
+        result: (UiState<String>) -> Unit
+    ) {
         database.collection(Constant.POSTS)
             .document(queryId)
             .update("status", status)
@@ -231,7 +311,32 @@ class RepositoryQueryImpl @Inject constructor(
                 result.invoke(UiState.Success("Status updated successfully"))
             }
             .addOnFailureListener { exception ->
-                result.invoke(UiState.Failure(exception.localizedMessage ?: "Failed to update status"))
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to update status"
+                    )
+                )
+            }
+    }
+
+    override fun deleteQuery(queryId: String, result: (UiState<String>) -> Unit) {
+        Log.d(TAG, "deleteQuery: Deleting query with ID: $queryId")
+
+        database.collection(Constant.POSTS)
+            .document(queryId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d(TAG, "deleteQuery: Successfully deleted query $queryId")
+                result.invoke(UiState.Success("Query deleted successfully"))
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "deleteQuery: Failed to delete query $queryId", exception)
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to delete query"
+                    )
+                )
+
             }
     }
 }
