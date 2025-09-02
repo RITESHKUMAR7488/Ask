@@ -74,6 +74,8 @@ class ChatRepositoryImpl @Inject constructor(
         result: (UiState<ChatRoomModel>) -> Unit
     ) {
         val participants = listOf(queryOwnerId, currentUserId).distinct()
+        Log.d(TAG, "Creating chat room with participants: $participants")
+
         val participantDetails = mapOf(
             queryOwnerId to ParticipantInfo(
                 userId = queryOwnerId,
@@ -99,14 +101,32 @@ class ChatRepositoryImpl @Inject constructor(
             lastMessageTime = System.currentTimeMillis(),
             lastMessageSenderId = currentUserId,
             createdAt = System.currentTimeMillis(),
-            isActive = true
+            isActive = true // ✅ Make sure this is set
+        )
+
+        Log.d(TAG, "Chat room data: $chatRoom")
+
+        // ✅ Create a map to ensure isActive field is properly saved
+        val chatRoomData = mapOf(
+            "chatRoomId" to chatRoom.chatRoomId,
+            "queryId" to chatRoom.queryId,
+            "queryTitle" to chatRoom.queryTitle,
+            "queryOwnerId" to chatRoom.queryOwnerId,
+            "queryOwnerName" to chatRoom.queryOwnerName,
+            "participants" to chatRoom.participants,
+            "participantDetails" to chatRoom.participantDetails,
+            "lastMessage" to chatRoom.lastMessage,
+            "lastMessageTime" to chatRoom.lastMessageTime,
+            "lastMessageSenderId" to chatRoom.lastMessageSenderId,
+            "createdAt" to chatRoom.createdAt,
+            "isActive" to true // ✅ Explicitly set as true
         )
 
         firestore.collection(CHAT_ROOMS)
             .document(chatRoomId)
-            .set(chatRoom)
+            .set(chatRoomData) // Use the map instead of the object
             .addOnSuccessListener {
-                Log.d(TAG, "Chat room created successfully")
+                Log.d(TAG, "Chat room created successfully with ID: $chatRoomId")
                 result.invoke(UiState.Success(chatRoom))
             }
             .addOnFailureListener { exception ->
@@ -114,7 +134,6 @@ class ChatRepositoryImpl @Inject constructor(
                 result.invoke(UiState.Failure(exception.message ?: "Failed to create chat room"))
             }
     }
-
     override fun sendMessage(
         chatRoomId: String,
         message: ChatModel,
@@ -257,5 +276,62 @@ class ChatRepositoryImpl @Inject constructor(
     private fun generateChatRoomId(queryId: String, userId1: String, userId2: String): String {
         val sortedIds = listOf(userId1, userId2).sorted()
         return "chat_${queryId}_${sortedIds[0]}_${sortedIds[1]}"
+    }
+    private fun sendChatNotification(
+        chatRoom: ChatRoomModel,
+        currentUserId: String,
+        currentUserName: String
+    ) {
+        // Find the other participant (receiver)
+        val receiverId = chatRoom.participants?.firstOrNull { it != currentUserId }
+
+        if (receiverId != null) {
+            val notification = mapOf(
+                "type" to "NEW_CHAT",
+                "title" to "New Chat Started",
+                "message" to "$currentUserName started a chat about: ${chatRoom.queryTitle}",
+                "senderId" to currentUserId,
+                "senderName" to currentUserName,
+                "targetUserId" to receiverId,
+                "chatRoomId" to chatRoom.chatRoomId,
+                "queryId" to chatRoom.queryId,
+                "queryTitle" to chatRoom.queryTitle,
+                "timestamp" to System.currentTimeMillis(),
+                "isRead" to false
+            )
+
+            firestore.collection("notifications")
+                .document()
+                .set(notification)
+                .addOnSuccessListener {
+                    Log.d(TAG, "Chat notification sent successfully")
+                }
+                .addOnFailureListener { exception ->
+                    Log.e(TAG, "Failed to send chat notification", exception)
+                }
+        }
+    }
+    fun fixExistingChatRooms() {
+        firestore.collection(CHAT_ROOMS)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val batch = firestore.batch()
+
+                snapshot.documents.forEach { doc ->
+                    val isActive = doc.getBoolean("isActive")
+                    if (isActive == null) {
+                        // Set isActive to true for all existing chat rooms
+                        batch.update(doc.reference, "isActive", true)
+                    }
+                }
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        Log.d(TAG, "Fixed existing chat rooms isActive field")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Failed to fix existing chat rooms", e)
+                    }
+            }
     }
 }
