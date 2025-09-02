@@ -31,25 +31,26 @@ class ChatRepositoryImpl @Inject constructor(
         currentUserName: String,
         result: (UiState<ChatRoomModel>) -> Unit
     ) {
-        Log.d(TAG, "createOrGetChatRoom: queryId=$queryId")
+        Log.d(TAG, "createOrGetChatRoom: queryId=$queryId, queryOwner=$queryOwnerId, currentUser=$currentUserId")
 
         val chatRoomId = generateChatRoomId(queryId, queryOwnerId, currentUserId)
+        Log.d(TAG, "Generated chatRoomId: $chatRoomId")
+
         val chatRoomRef = firestore.collection(CHAT_ROOMS).document(chatRoomId)
 
         // Check if chat room already exists
         chatRoomRef.get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    // Chat room exists, return it
                     Log.d(TAG, "Chat room exists, returning existing room")
                     val chatRoom = document.toObject(ChatRoomModel::class.java)
                     if (chatRoom != null) {
+                        chatRoom.chatRoomId = chatRoomId // Ensure ID is set
                         result.invoke(UiState.Success(chatRoom))
                     } else {
                         result.invoke(UiState.Failure("Failed to parse existing chat room"))
                     }
                 } else {
-                    // Create new chat room
                     Log.d(TAG, "Creating new chat room")
                     createNewChatRoom(
                         chatRoomId, queryId, queryTitle, queryOwnerId,
@@ -101,30 +102,13 @@ class ChatRepositoryImpl @Inject constructor(
             lastMessageTime = System.currentTimeMillis(),
             lastMessageSenderId = currentUserId,
             createdAt = System.currentTimeMillis(),
-            isActive = true // ✅ Make sure this is set
+            isActive = true
         )
 
-        Log.d(TAG, "Chat room data: $chatRoom")
-
-        // ✅ Create a map to ensure isActive field is properly saved
-        val chatRoomData = mapOf(
-            "chatRoomId" to chatRoom.chatRoomId,
-            "queryId" to chatRoom.queryId,
-            "queryTitle" to chatRoom.queryTitle,
-            "queryOwnerId" to chatRoom.queryOwnerId,
-            "queryOwnerName" to chatRoom.queryOwnerName,
-            "participants" to chatRoom.participants,
-            "participantDetails" to chatRoom.participantDetails,
-            "lastMessage" to chatRoom.lastMessage,
-            "lastMessageTime" to chatRoom.lastMessageTime,
-            "lastMessageSenderId" to chatRoom.lastMessageSenderId,
-            "createdAt" to chatRoom.createdAt,
-            "isActive" to true // ✅ Explicitly set as true
-        )
-
+        // Create chat room document
         firestore.collection(CHAT_ROOMS)
             .document(chatRoomId)
-            .set(chatRoomData) // Use the map instead of the object
+            .set(chatRoom)
             .addOnSuccessListener {
                 Log.d(TAG, "Chat room created successfully with ID: $chatRoomId")
                 result.invoke(UiState.Success(chatRoom))
@@ -134,6 +118,7 @@ class ChatRepositoryImpl @Inject constructor(
                 result.invoke(UiState.Failure(exception.message ?: "Failed to create chat room"))
             }
     }
+
     override fun sendMessage(
         chatRoomId: String,
         message: ChatModel,
@@ -141,21 +126,27 @@ class ChatRepositoryImpl @Inject constructor(
     ) {
         Log.d(TAG, "sendMessage: chatRoomId=$chatRoomId, message=${message.message}")
 
-        val messageId = firestore.collection(CHAT_ROOMS)
-            .document(chatRoomId)
-            .collection(MESSAGES)
-            .document().id
+        // Generate message ID if not set
+        if (message.messageId.isNullOrEmpty()) {
+            message.messageId = firestore.collection(CHAT_ROOMS)
+                .document(chatRoomId)
+                .collection(MESSAGES)
+                .document().id
+        }
 
-        message.messageId = messageId
+        // Set timestamp if not set
+        if (message.timestamp == 0L) {
+            message.timestamp = System.currentTimeMillis()
+        }
 
         // Add message to subcollection
         firestore.collection(CHAT_ROOMS)
             .document(chatRoomId)
             .collection(MESSAGES)
-            .document(messageId)
+            .document(message.messageId!!)
             .set(message)
             .addOnSuccessListener {
-                Log.d(TAG, "Message sent successfully")
+                Log.d(TAG, "Message sent successfully: ${message.messageId}")
 
                 // Update chat room's last message
                 updateChatRoomLastMessage(chatRoomId, message)
@@ -199,7 +190,14 @@ class ChatRepositoryImpl @Inject constructor(
             .get()
             .addOnSuccessListener { querySnapshot ->
                 val messages = querySnapshot.documents.mapNotNull { doc ->
-                    doc.toObject(ChatModel::class.java)
+                    try {
+                        val message = doc.toObject(ChatModel::class.java)
+                        message?.messageId = doc.id // Ensure message ID is set
+                        message
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing message: ${doc.id}", e)
+                        null
+                    }
                 }
                 Log.d(TAG, "Retrieved ${messages.size} messages")
                 result.invoke(UiState.Success(messages))
@@ -216,6 +214,9 @@ class ChatRepositoryImpl @Inject constructor(
     ) {
         Log.d(TAG, "addMessageListener: chatRoomId=$chatRoomId")
 
+        // Remove existing listener first
+        removeMessageListener()
+
         messageListener = firestore.collection(CHAT_ROOMS)
             .document(chatRoomId)
             .collection(MESSAGES)
@@ -228,10 +229,19 @@ class ChatRepositoryImpl @Inject constructor(
 
                 if (querySnapshot != null) {
                     val messages = querySnapshot.documents.mapNotNull { doc ->
-                        doc.toObject(ChatModel::class.java)
+                        try {
+                            val message = doc.toObject(ChatModel::class.java)
+                            message?.messageId = doc.id // Ensure message ID is set
+                            message
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing message in listener: ${doc.id}", e)
+                            null
+                        }
                     }
                     Log.d(TAG, "Real-time update: ${messages.size} messages")
                     callback(messages)
+                } else {
+                    Log.w(TAG, "QuerySnapshot is null in message listener")
                 }
             }
     }
@@ -247,6 +257,8 @@ class ChatRepositoryImpl @Inject constructor(
         userId: String,
         result: (UiState<String>) -> Unit
     ) {
+        Log.d(TAG, "markMessagesAsRead: chatRoomId=$chatRoomId, userId=$userId")
+
         firestore.collection(CHAT_ROOMS)
             .document(chatRoomId)
             .collection(MESSAGES)
@@ -254,84 +266,45 @@ class ChatRepositoryImpl @Inject constructor(
             .whereNotEqualTo("senderId", userId)
             .get()
             .addOnSuccessListener { querySnapshot ->
+                if (querySnapshot.isEmpty) {
+                    Log.d(TAG, "No unread messages to mark")
+                    result.invoke(UiState.Success("No messages to mark as read"))
+                    return@addOnSuccessListener
+                }
+
                 val batch = firestore.batch()
+                var updateCount = 0
 
                 querySnapshot.documents.forEach { doc ->
                     batch.update(doc.reference, "isRead", true)
+                    updateCount++
                 }
 
-                batch.commit()
-                    .addOnSuccessListener {
-                        result.invoke(UiState.Success("Messages marked as read"))
-                    }
-                    .addOnFailureListener { exception ->
-                        result.invoke(UiState.Failure(exception.message ?: "Failed to mark messages as read"))
-                    }
+                if (updateCount > 0) {
+                    batch.commit()
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Marked $updateCount messages as read")
+                            result.invoke(UiState.Success("Messages marked as read"))
+                        }
+                        .addOnFailureListener { exception ->
+                            Log.e(TAG, "Failed to commit batch update", exception)
+                            result.invoke(UiState.Failure(exception.message ?: "Failed to mark messages as read"))
+                        }
+                } else {
+                    result.invoke(UiState.Success("No messages to mark as read"))
+                }
             }
             .addOnFailureListener { exception ->
+                Log.e(TAG, "Failed to query unread messages", exception)
                 result.invoke(UiState.Failure(exception.message ?: "Failed to update read status"))
             }
     }
 
     private fun generateChatRoomId(queryId: String, userId1: String, userId2: String): String {
+        // Sort user IDs to ensure consistent chat room ID regardless of who initiates
         val sortedIds = listOf(userId1, userId2).sorted()
-        return "chat_${queryId}_${sortedIds[0]}_${sortedIds[1]}"
-    }
-    private fun sendChatNotification(
-        chatRoom: ChatRoomModel,
-        currentUserId: String,
-        currentUserName: String
-    ) {
-        // Find the other participant (receiver)
-        val receiverId = chatRoom.participants?.firstOrNull { it != currentUserId }
-
-        if (receiverId != null) {
-            val notification = mapOf(
-                "type" to "NEW_CHAT",
-                "title" to "New Chat Started",
-                "message" to "$currentUserName started a chat about: ${chatRoom.queryTitle}",
-                "senderId" to currentUserId,
-                "senderName" to currentUserName,
-                "targetUserId" to receiverId,
-                "chatRoomId" to chatRoom.chatRoomId,
-                "queryId" to chatRoom.queryId,
-                "queryTitle" to chatRoom.queryTitle,
-                "timestamp" to System.currentTimeMillis(),
-                "isRead" to false
-            )
-
-            firestore.collection("notifications")
-                .document()
-                .set(notification)
-                .addOnSuccessListener {
-                    Log.d(TAG, "Chat notification sent successfully")
-                }
-                .addOnFailureListener { exception ->
-                    Log.e(TAG, "Failed to send chat notification", exception)
-                }
-        }
-    }
-    fun fixExistingChatRooms() {
-        firestore.collection(CHAT_ROOMS)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val batch = firestore.batch()
-
-                snapshot.documents.forEach { doc ->
-                    val isActive = doc.getBoolean("isActive")
-                    if (isActive == null) {
-                        // Set isActive to true for all existing chat rooms
-                        batch.update(doc.reference, "isActive", true)
-                    }
-                }
-
-                batch.commit()
-                    .addOnSuccessListener {
-                        Log.d(TAG, "Fixed existing chat rooms isActive field")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Failed to fix existing chat rooms", e)
-                    }
-            }
+        val chatRoomId = "chat_${queryId}_${sortedIds[0]}_${sortedIds[1]}"
+        Log.d(TAG, "generateChatRoomId: queryId=$queryId, users=$sortedIds, result=$chatRoomId")
+        return chatRoomId
     }
 }
