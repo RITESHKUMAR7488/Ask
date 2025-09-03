@@ -43,6 +43,7 @@
     <color name="update_chip_color">#009688</color>
     <color name="community_chip_color">#4CAF50</color>
     <color name="response_chip_color">#F44336</color>
+    <color name="chat_background">#F5F5F5</color>
     <color name="nav_selected">#1976D2</color>
     <color name="nav_unselected">#757575</color>
     <color name="colorAccent">#FF5722</color> <!-- Uses your accent_color -->
@@ -50,4 +51,5 @@
     <!-- Navigation specific colors (if you want different styling) -->
     <color name="nav_header_text">#FFFFFF</color>
     <color name="nav_item_selected">#E3F2FD</color>
+
 </resources>

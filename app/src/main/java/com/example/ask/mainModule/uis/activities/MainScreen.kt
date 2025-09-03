@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
+import com.example.ask.chatModule.uis.fragments.ChatFragment
 import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.mainModule.uis.fragments.HomeFragment
@@ -98,6 +99,10 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                     }
                     R.id.community -> {
                         replaceFragment(CommunityFragment(), "Communities")
+                        true
+                    }
+                    R.id.chat -> { // Add this new case
+                        replaceFragment(ChatFragment(), "Chats")
                         true
                     }
                     else -> {
