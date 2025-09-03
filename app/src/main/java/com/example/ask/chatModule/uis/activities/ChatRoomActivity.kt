@@ -19,7 +19,7 @@ import com.example.ask.utilities.UiState
 // IMPORTANT: No @AndroidEntryPoint here because BaseActivity already has it.
 class ChatRoomActivity : BaseActivity() {
 
-    private lateinit var binding: ActivityChatRoomBinding
+    private lateinit var binding:  ActivityChatRoomBinding
     private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var messageAdapter: MessageAdapter
 
