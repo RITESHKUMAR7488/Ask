@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.addModule.viewModels.AddViewModel
+import com.example.ask.chatModule.uis.activities.ChatRoomActivity
 import com.example.ask.databinding.FragmentHome2Binding
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
@@ -221,10 +222,38 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Chat feature coming soon!"
-        )
+        val currentUser = preferenceManager.userModel
+        val currentUserId = preferenceManager.userId
+
+        if (currentUser != null && !currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty()) {
+            if (currentUserId == query.userId) {
+                motionToastUtil.showWarningToast(
+                    requireActivity(),
+                    "You cannot chat with yourself"
+                )
+                return
+            }
+
+            // Navigate to ChatRoomActivity
+            val intent = Intent(requireContext(), ChatRoomActivity::class.java).apply {
+                putExtra(ChatRoomActivity.EXTRA_TARGET_USER_ID, query.userId)
+                putExtra(ChatRoomActivity.EXTRA_TARGET_USER_NAME, query.userName)
+                putExtra(ChatRoomActivity.EXTRA_TARGET_USER_IMAGE, query.userProfileImage)
+                putExtra(ChatRoomActivity.EXTRA_QUERY_ID, query.queryId)
+                putExtra(ChatRoomActivity.EXTRA_QUERY_TITLE, query.title)
+            }
+            startActivity(intent)
+
+            motionToastUtil.showInfoToast(
+                requireActivity(),
+                "Opening chat with ${query.userName}..."
+            )
+        } else {
+            motionToastUtil.showFailureToast(
+                requireActivity(),
+                "Unable to start chat. Please check your login status."
+            )
+        }
     }
 
     override fun onResume() {

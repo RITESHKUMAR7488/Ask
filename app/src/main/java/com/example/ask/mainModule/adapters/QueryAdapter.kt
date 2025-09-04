@@ -127,19 +127,25 @@ class QueryAdapter(
                     onChatClick(query)
                 }
 
-                // Customize button state based on query status
+                // Customize button state and text based on query status
                 when (query.status) {
                     "RESOLVED", "CLOSED" -> {
                         btnHelp.isEnabled = false
                         btnHelp.alpha = 0.5f
-                        btnChat.isEnabled = false
-                        btnChat.alpha = 0.5f
+                        btnHelp.text = "Closed"
+
+                        btnChat.isEnabled = true // Chat still enabled for closed queries
+                        btnChat.alpha = 1.0f
+                        btnChat.text = "Chat"
                     }
                     else -> {
                         btnHelp.isEnabled = true
                         btnHelp.alpha = 1.0f
+                        btnHelp.text = "Help"
+
                         btnChat.isEnabled = true
                         btnChat.alpha = 1.0f
+                        btnChat.text = "Chat"
                     }
                 }
             }
