@@ -95,7 +95,7 @@ class ChatRoomActivity : BaseActivity() {
             return
         }
 
-        Log.d(TAG, "Creating new chat room with user: $targetUserName")
+        Log.d(TAG, "Creating  new chat room with user: $targetUserName")
 
         chatViewModel.createOrGetChatRoom(
             currentUserId = currentUserId!!,
