@@ -77,4 +77,13 @@ class AddViewModel @Inject constructor(
             _updateStatus.value = it
         }
     }
+    private val _deleteQuery = MutableLiveData<UiState<String>>()
+    val deleteQuery: LiveData<UiState<String>> = _deleteQuery
+
+    fun deleteQuery(queryId: String) {
+        _deleteQuery.value = UiState.Loading
+        repository.deleteQuery(queryId) {
+            _deleteQuery.value = it
+        }
+    }
 }
