@@ -1,4 +1,4 @@
-// ChatModel.kt
+// Enhanced ChatModel.kt
 package com.example.ask.chatModule.models
 
 import android.os.Parcelable
@@ -17,7 +17,9 @@ data class ChatRoomModel(
     var lastMessageTime: Long? = null,
     var lastMessageSenderId: String? = null,
     var createdAt: Long? = null,
-    var isActive: Boolean = true
+    var isActive: Boolean = true,
+    // New fields for typing indicator
+    var typingUsers: Map<String, Long>? = null // Map of userId to timestamp when they started typing
 ) : Parcelable
 
 @Parcelize
@@ -42,4 +44,14 @@ data class ChatParticipant(
     var userImage: String? = null,
     var isOnline: Boolean = false,
     var lastSeen: Long? = null
+) : Parcelable
+
+// New model for typing indicator
+@Parcelize
+data class TypingIndicator(
+    var userId: String? = null,
+    var userName: String? = null,
+    var chatRoomId: String? = null,
+    var isTyping: Boolean = false,
+    var timestamp: Long? = null
 ) : Parcelable

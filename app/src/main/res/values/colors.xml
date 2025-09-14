@@ -51,5 +51,8 @@
     <!-- Navigation specific colors (if you want different styling) -->
     <color name="nav_header_text">#FFFFFF</color>
     <color name="nav_item_selected">#E3F2FD</color>
+    <color name="typing_indicator_background">#E8E8E8</color>
+    <color name="message_sent_background">@color/primary_color</color>
+    <color name="message_received_background">#FFFFFF</color>
 
 </resources>

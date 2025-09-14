@@ -27,7 +27,7 @@
             android:background="@color/chat_background"
             android:padding="8dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            app:layout_constraintBottom_toTopOf="@+id/layoutMessageInput"
+            app:layout_constraintBottom_toTopOf="@+id/typingIndicatorLayout"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/toolbar"
@@ -39,10 +39,45 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@+id/layoutMessageInput"
+            app:layout_constraintBottom_toTopOf="@+id/typingIndicatorLayout"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/toolbar" />
+
+        <!-- Typing Indicator Layout -->
+        <LinearLayout
+            android:id="@+id/typingIndicatorLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/chat_background"
+            android:padding="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/layoutMessageInput"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/ivTypingDots"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="8dp"
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/typing_dots_animation"
+                android:contentDescription="Typing animation" />
+
+            <TextView
+                android:id="@+id/tvTypingIndicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:textColor="@android:color/darker_gray"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                tools:text="John is typing..." />
+
+        </LinearLayout>
 
         <!-- Message Input Layout -->
         <LinearLayout
@@ -76,7 +111,9 @@
                     android:minHeight="40dp"
                     android:padding="12dp"
                     android:textColor="@android:color/black"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:imeOptions="actionSend"
+                    android:inputType="textMultiLine|textCapSentences" />
 
             </androidx.cardview.widget.CardView>
 

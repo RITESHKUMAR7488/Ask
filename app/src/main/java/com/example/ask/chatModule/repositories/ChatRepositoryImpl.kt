@@ -3,7 +3,7 @@ package com.example.ask.chatModule.repositories
 import android.util.Log
 import com.example.ask.chatModule.models.ChatRoomModel
 import com.example.ask.chatModule.models.MessageModel
-import com.example.ask.utilities.Constant
+import com.example.ask.chatModule.models.TypingIndicator
 import com.example.ask.utilities.UiState
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -18,9 +18,12 @@ class ChatRepositoryImpl @Inject constructor(
         private const val TAG = "ChatRepository"
         private const val CHAT_ROOMS = "chatRooms"
         private const val MESSAGES = "messages"
+        private const val TYPING_INDICATORS = "typingIndicators"
+        private const val TYPING_TIMEOUT = 3000L // 3 seconds timeout for typing
     }
 
     private var messageListener: ListenerRegistration? = null
+    private var typingListener: ListenerRegistration? = null
 
     override fun createChatRoom(
         chatRoom: ChatRoomModel,
@@ -80,6 +83,8 @@ class ChatRepositoryImpl @Inject constructor(
             .addOnSuccessListener {
                 // Update chat room's last message info
                 updateChatRoomLastMessage(message)
+                // Clear typing indicator when message is sent
+                setUserTyping(message.chatRoomId!!, message.senderId!!, message.senderName ?: "", false)
                 Log.d(TAG, "Message sent successfully: ${message.messageId}")
                 result(UiState.Success("Message sent successfully"))
             }
@@ -205,5 +210,92 @@ class ChatRepositoryImpl @Inject constructor(
     override fun removeMessageListener() {
         messageListener?.remove()
         messageListener = null
+    }
+
+    // New typing indicator methods
+    override fun setUserTyping(
+        chatRoomId: String,
+        userId: String,
+        userName: String,
+        isTyping: Boolean
+    ) {
+        val typingRef = firestore.collection(CHAT_ROOMS)
+            .document(chatRoomId)
+            .collection(TYPING_INDICATORS)
+            .document(userId)
+
+        if (isTyping) {
+            val typingIndicator = TypingIndicator(
+                userId = userId,
+                userName = userName,
+                chatRoomId = chatRoomId,
+                isTyping = true,
+                timestamp = System.currentTimeMillis()
+            )
+
+            typingRef.set(typingIndicator)
+                .addOnSuccessListener {
+                    Log.d(TAG, "Typing indicator set for user: $userName")
+                }
+                .addOnFailureListener { exception ->
+                    Log.e(TAG, "Failed to set typing indicator", exception)
+                }
+        } else {
+            // Remove typing indicator when user stops typing
+            typingRef.delete()
+                .addOnSuccessListener {
+                    Log.d(TAG, "Typing indicator removed for user: $userName")
+                }
+                .addOnFailureListener { exception ->
+                    Log.e(TAG, "Failed to remove typing indicator", exception)
+                }
+        }
+    }
+
+    override fun listenToTypingIndicator(
+        chatRoomId: String,
+        currentUserId: String,
+        onTypingChanged: (List<TypingIndicator>) -> Unit
+    ) {
+        removeTypingListener() // Remove any existing listener
+
+        typingListener = firestore.collection(CHAT_ROOMS)
+            .document(chatRoomId)
+            .collection(TYPING_INDICATORS)
+            .addSnapshotListener { querySnapshot, exception ->
+                if (exception != null) {
+                    Log.e(TAG, "Listen to typing indicators failed", exception)
+                    return@addSnapshotListener
+                }
+
+                if (querySnapshot != null) {
+                    val currentTime = System.currentTimeMillis()
+                    val typingIndicators = querySnapshot.documents.mapNotNull { document ->
+                        val typingIndicator = document.toObject(TypingIndicator::class.java)
+                        // Filter out expired typing indicators and current user
+                        if (typingIndicator != null &&
+                            typingIndicator.userId != currentUserId &&
+                            typingIndicator.timestamp != null &&
+                            (currentTime - typingIndicator.timestamp!!) < TYPING_TIMEOUT) {
+                            typingIndicator
+                        } else {
+                            // Remove expired typing indicator
+                            if (typingIndicator?.timestamp != null &&
+                                (currentTime - typingIndicator.timestamp!!) >= TYPING_TIMEOUT) {
+                                document.reference.delete()
+                            }
+                            null
+                        }
+                    }
+
+                    Log.d(TAG, "Typing indicators updated: ${typingIndicators.size} users typing")
+                    onTypingChanged(typingIndicators)
+                }
+            }
+    }
+
+    override fun removeTypingListener() {
+        typingListener?.remove()
+        typingListener = null
     }
 }

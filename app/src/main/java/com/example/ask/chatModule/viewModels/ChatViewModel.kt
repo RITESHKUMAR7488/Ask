@@ -1,11 +1,14 @@
 package com.example.ask.chatModule.viewModels
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.ask.chatModule.models.ChatRoomModel
 import com.example.ask.chatModule.models.MessageModel
+import com.example.ask.chatModule.models.TypingIndicator
 import com.example.ask.chatModule.repositories.ChatRepository
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +21,7 @@ class ChatViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "ChatViewModel"
+        private const val TYPING_DELAY = 1000L // 1 second delay before stopping typing indicator
     }
 
     // Chat Rooms
@@ -44,6 +48,18 @@ class ChatViewModel @Inject constructor(
     private val _existingChatRoom = MutableLiveData<UiState<ChatRoomModel?>>()
     val existingChatRoom: LiveData<UiState<ChatRoomModel?>> = _existingChatRoom
 
+    // Typing indicators
+    private val _typingIndicators = MutableLiveData<List<TypingIndicator>>()
+    val typingIndicators: LiveData<List<TypingIndicator>> = _typingIndicators
+
+    // Handler for typing timeout
+    private val typingHandler = Handler(Looper.getMainLooper())
+    private var typingRunnable: Runnable? = null
+    private var isUserTyping = false
+    private var currentChatRoomId: String? = null
+    private var currentUserId: String? = null
+    private var currentUserName: String? = null
+
     /**
      * Create or get existing chat room
      */
@@ -58,6 +74,10 @@ class ChatViewModel @Inject constructor(
         queryTitle: String?
     ) {
         Log.d(TAG, "Creating or getting chat room between $currentUserId and $targetUserId")
+
+        // Store current user info for typing indicators
+        this.currentUserId = currentUserId
+        this.currentUserName = currentUserName
 
         // First check if chat room already exists
         checkExistingChatRoom(currentUserId, targetUserId)
@@ -169,6 +189,7 @@ class ChatViewModel @Inject constructor(
      */
     fun listenToMessages(chatRoomId: String) {
         Log.d(TAG, "Starting real-time message listener for chat room: $chatRoomId")
+        currentChatRoomId = chatRoomId
         chatRepository.listenToMessages(chatRoomId) { messages ->
             _realTimeMessages.value = messages
         }
@@ -189,8 +210,83 @@ class ChatViewModel @Inject constructor(
         chatRepository.removeMessageListener()
     }
 
+    // New typing indicator methods
+
+    /**
+     * Start listening to typing indicators
+     */
+    fun listenToTypingIndicators(chatRoomId: String, currentUserId: String) {
+        Log.d(TAG, "Starting typing indicator listener for chat room: $chatRoomId")
+        chatRepository.listenToTypingIndicator(chatRoomId, currentUserId) { typingUsers ->
+            _typingIndicators.value = typingUsers
+        }
+    }
+
+    /**
+     * Handle user typing - call this when user starts typing
+     */
+    fun onUserStartTyping() {
+        val chatRoomId = currentChatRoomId ?: return
+        val userId = currentUserId ?: return
+        val userName = currentUserName ?: return
+
+        if (!isUserTyping) {
+            isUserTyping = true
+            chatRepository.setUserTyping(chatRoomId, userId, userName, true)
+            Log.d(TAG, "User started typing")
+        }
+
+        // Cancel previous typing timeout
+        typingRunnable?.let { typingHandler.removeCallbacks(it) }
+
+        // Set new typing timeout
+        typingRunnable = Runnable {
+            onUserStopTyping()
+        }
+        typingHandler.postDelayed(typingRunnable!!, TYPING_DELAY)
+    }
+
+    /**
+     * Handle user stop typing - call this when user stops typing
+     */
+    fun onUserStopTyping() {
+        val chatRoomId = currentChatRoomId ?: return
+        val userId = currentUserId ?: return
+        val userName = currentUserName ?: return
+
+        if (isUserTyping) {
+            isUserTyping = false
+            chatRepository.setUserTyping(chatRoomId, userId, userName, false)
+            Log.d(TAG, "User stopped typing")
+        }
+
+        // Cancel typing timeout
+        typingRunnable?.let { typingHandler.removeCallbacks(it) }
+        typingRunnable = null
+    }
+
+    /**
+     * Remove typing listener
+     */
+    fun removeTypingListener() {
+        Log.d(TAG, "Removing typing listener")
+        chatRepository.removeTypingListener()
+    }
+
+    /**
+     * Set current chat room for typing indicators
+     */
+    fun setCurrentChatRoom(chatRoomId: String, userId: String, userName: String) {
+        currentChatRoomId = chatRoomId
+        currentUserId = userId
+        currentUserName = userName
+    }
+
     override fun onCleared() {
         super.onCleared()
         removeMessageListener()
+        removeTypingListener()
+        onUserStopTyping() // Ensure typing indicator is cleared
+        typingHandler.removeCallbacksAndMessages(null)
     }
 }

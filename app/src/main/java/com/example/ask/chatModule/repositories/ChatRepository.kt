@@ -2,6 +2,7 @@ package com.example.ask.chatModule.repositories
 
 import com.example.ask.chatModule.models.ChatRoomModel
 import com.example.ask.chatModule.models.MessageModel
+import com.example.ask.chatModule.models.TypingIndicator
 import com.example.ask.utilities.UiState
 
 interface ChatRepository {
@@ -43,4 +44,20 @@ interface ChatRepository {
     )
 
     fun removeMessageListener()
+
+    // New typing indicator methods
+    fun setUserTyping(
+        chatRoomId: String,
+        userId: String,
+        userName: String,
+        isTyping: Boolean
+    )
+
+    fun listenToTypingIndicator(
+        chatRoomId: String,
+        currentUserId: String,
+        onTypingChanged: (List<TypingIndicator>) -> Unit
+    )
+
+    fun removeTypingListener()
 }
