@@ -34,5 +34,14 @@ class OnBoardingViewModel @Inject constructor(private val repository: OnBoarding
             _login.value=it
         }
     }
+    private val _forgotPassword = MutableLiveData<UiState<String>>()
+    val forgotPassword: LiveData<UiState<String>> = _forgotPassword
+
+    fun forgotPassword(email: String) {
+        _forgotPassword.value = UiState.Loading
+        repository.forgotPassword(email) {
+            _forgotPassword.value = it
+        }
+    }
 
 }

@@ -8,5 +8,6 @@ interface OnBoardingRepository {
     fun register(context: Context,email:String,password:String,userModel: UserModel,result: (UiState<String>)->Unit)
     fun logIn(context: Context,email: String,password: String,result: (UiState<String>) -> Unit)
     fun sendUserData(context: Context,userModel: UserModel,result: (UiState<String>) -> Unit)
+    fun forgotPassword(email: String, result: (UiState<String>) -> Unit)
 
 }

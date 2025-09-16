@@ -15,6 +15,8 @@ import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import www.sanju.motiontoast.MotionToast
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 
 @AndroidEntryPoint
 class SignInActivity : BaseActivity() {
@@ -31,6 +33,9 @@ class SignInActivity : BaseActivity() {
             btnSignUp.setOnClickListener {
                 val intent= Intent(this@SignInActivity,RegisterActivity::class.java)
                 startActivity(intent)
+            }
+            binding.tvForgotPassword.setOnClickListener {
+                showForgotPasswordDialog()
             }
 
 
@@ -82,5 +87,24 @@ class SignInActivity : BaseActivity() {
 
         }
 
+    }
+    private fun showForgotPasswordDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Forgot Password")
+        val view = layoutInflater.inflate(R.layout.dialog_forgot_password, null)
+        val emailEditText = view.findViewById<EditText>(R.id.etEmail)
+        builder.setView(view)
+        builder.setPositiveButton("Reset") { _, _ ->
+            val email = emailEditText.text.toString().trim()
+            if (email.isNotEmpty()) {
+                onBoardingViewModel.forgotPassword(email)
+            } else {
+                motionToastUtil.showWarningToast(this, "Please enter your email.")
+            }
+        }
+        builder.setNegativeButton("Cancel") { dialog, _ ->
+            dialog.dismiss()
+        }
+        builder.create().show()
     }
 }

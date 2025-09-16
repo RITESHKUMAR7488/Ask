@@ -1,6 +1,7 @@
 package com.example.ask.onBoardingModule.repositories
 
 import android.content.Context
+import android.util.Log
 import com.example.ask.onBoardingModule.models.UserModel
 import com.example.ask.utilities.Constant
 import com.example.ask.utilities.PreferenceManager
@@ -125,5 +126,18 @@ class OnBoardingRepositoryImpl(
 
 
 
+    }
+
+    override fun forgotPassword(email: String, result: (UiState<String>) -> Unit) {
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("ForgotPassword", "Password reset email sent successfully to: $email")
+                    result.invoke(UiState.Success("Password reset email sent successfully."))
+                } else {
+                    Log.e("ForgotPassword", "Failed to send password reset email.", task.exception)
+                    result.invoke(UiState.Failure(task.exception?.localizedMessage ?: "Failed to send password reset email."))
+                }
+            }
     }
 }
