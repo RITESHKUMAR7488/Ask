@@ -12,4 +12,5 @@ data class UserModel(
     var mobileNumber: String? = null,
     var imageUrl: String? = null,
     var address: String? = null,
+    var profilePicUrl: String = ""
 ):Parcelable

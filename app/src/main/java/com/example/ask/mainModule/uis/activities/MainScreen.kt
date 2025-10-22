@@ -25,6 +25,7 @@ import com.example.ask.mainModule.uis.activities.MyQueriesActivity
 import com.example.ask.notificationModule.uis.NotificationActivity
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
+import com.example.ask.profileModule.uis.ProfileFragment
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
 import com.google.android.material.navigation.NavigationView
@@ -104,6 +105,10 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                     }
                     R.id.chat -> { // Add this new case
                         replaceFragment(ChatFragment(), "Chats")
+                        true
+                    }
+                    R.id.profile -> {
+                        replaceFragment(ProfileFragment(), "Profile")
                         true
                     }
                     else -> {

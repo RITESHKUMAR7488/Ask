@@ -22,5 +22,9 @@
         android:id="@+id/community"
         android:title="Community"
         android:icon="@drawable/ic_community"/>
+    <item
+        android:id="@+id/profile"
+        android:title="Profile"
+        android:icon="@drawable/ic_default_profile"/>
 
 </menu>
