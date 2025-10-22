@@ -6,38 +6,57 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
-import com.example.ask.addModule.viewModels.AddViewModel
 import com.example.ask.chatModule.uis.activities.ChatRoomActivity
+import com.example.ask.communityModule.models.CommunityModels
+import com.example.ask.communityModule.uis.CommunityActivity
 import com.example.ask.databinding.FragmentHome2Binding
+import com.example.ask.databinding.FragmentHomeBinding // Make sure to use fragment_home.xml
 import com.example.ask.mainModule.adapters.QueryAdapter
+import com.example.ask.mainModule.viewModels.HomeViewModel
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
+import com.example.ask.search.adapters.SearchResultAdapter
+import com.example.ask.search.model.SearchResult
+import com.example.ask.search.model.SearchResultType
 import com.example.ask.utilities.BaseFragment
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : BaseFragment() {
 
+    // Make sure this binding class matches your XML file name (e.g., fragment_home.xml)
     private var _binding: FragmentHome2Binding? = null
     private val binding get() = _binding!!
 
-    private val addViewModel: AddViewModel by viewModels()
+    // Use the new HomeViewModel for search and queries
+    private val homeViewModel: HomeViewModel by viewModels()
+
+    // ViewModel for sending notifications (from your original file)
     private val notificationViewModel: NotificationViewModel by viewModels()
+
     private lateinit var queryAdapter: QueryAdapter
+    private lateinit var searchAdapter: SearchResultAdapter
 
     companion object {
         private const val TAG = "HomeFragment"
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // Ensure this layout file 'fragment_home.xml' is the one I provided,
+        // which includes the SearchView and state layouts.
         _binding = FragmentHome2Binding.inflate(inflater, container, false)
         return binding.root
     }
@@ -45,119 +64,75 @@ class HomeFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupRecyclerView()
-        setupSwipeRefresh()
+        setupRecyclerViews()
+        setupSearchView()
         observeViewModel()
-        loadQueries()
-        debugCommunityData()
+        setupClickListeners()
     }
 
-    private fun setupRecyclerView() {
+    private fun setupRecyclerViews() {
+        // 1. Setup Query Adapter (providing all three required parameters)
         queryAdapter = QueryAdapter(
             context = requireContext(),
             onQueryClick = { query ->
-                onQueryClicked(query)
+                onQueryClicked(query) // Use your existing handler
             },
             onHelpClick = { query ->
-                onHelpClicked(query)
+                onHelpClicked(query) // Use your existing handler
             },
             onChatClick = { query ->
-                onChatClicked(query)
+                onChatClicked(query) // Use your existing handler
             }
         )
 
-        binding.recyclerViewQueries.apply {
+        // 2. Setup Search Adapter
+        searchAdapter = SearchResultAdapter(requireContext()) { result ->
+            handleResultClick(result)
+        }
+
+        // Set up the RecyclerView
+        binding.queryRecycler.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = queryAdapter
+            adapter = queryAdapter // Start with query adapter
             setHasFixedSize(true)
         }
     }
 
-    private fun setupSwipeRefresh() {
-        binding.swipeRefreshLayout.setOnRefreshListener {
-            loadQueries()
-        }
+    private fun setupSearchView() {
+        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                homeViewModel.onQueryChanged(query ?: "")
+                binding.searchView.clearFocus()
+                return true
+            }
 
-        binding.swipeRefreshLayout.setColorSchemeResources(
-            com.example.ask.R.color.primary_color,
-            com.example.ask.R.color.secondary_color
-        )
+            override fun onQueryTextChange(newText: String?): Boolean {
+                homeViewModel.onQueryChanged(newText ?: "")
+                return true
+            }
+        })
     }
 
-    private fun loadQueries() {
-        val userId = preferenceManager.userId
-        Log.d(TAG, "loadQueries: userId = $userId")
-
-        if (!userId.isNullOrEmpty()) {
-            Log.d(TAG, "loadQueries: Calling getQueriesFromUserCommunities for userId: $userId")
-            addViewModel.getQueriesFromUserCommunities(userId)
-        } else {
-            Log.e(TAG, "loadQueries: userId is null or empty")
-            motionToastUtil.showFailureToast(
-                requireActivity(),
-                "User not logged in. Please login to view queries."
-            )
-            binding.swipeRefreshLayout.isRefreshing = false
+    private fun setupClickListeners() {
+        binding.btnRetry.setOnClickListener {
+            homeViewModel.retry()
         }
+
+        // The setOnMenuItemClickListener that caused the error has been removed.
     }
 
+    // --- Coroutine Usage ---
+    // Safely collects the single UI state from the HomeViewModel.
     private fun observeViewModel() {
-        addViewModel.communityQueries.observe(viewLifecycleOwner) { state ->
-            Log.d(TAG, "observeViewModel: Received state: $state")
-            binding.swipeRefreshLayout.isRefreshing = false
-
-            when (state) {
-                is UiState.Loading -> {
-                    Log.d(TAG, "observeViewModel: Loading state")
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.recyclerViewQueries.visibility = View.GONE
-                    binding.layoutEmptyState.visibility = View.GONE
-                }
-
-                is UiState.Success -> {
-                    Log.d(TAG, "observeViewModel: Success state with ${state.data.size} queries")
-                    binding.progressBar.visibility = View.GONE
-
-                    if (state.data.isEmpty()) {
-                        Log.d(TAG, "observeViewModel: No queries found, showing empty state")
-                        binding.recyclerViewQueries.visibility = View.GONE
-                        binding.layoutEmptyState.visibility = View.VISIBLE
-                        binding.tvEmptyMessage?.text = "No queries found in your joined communities.\nJoin communities to see queries or create your first query!"
-                    } else {
-                        Log.d(TAG, "observeViewModel: Showing ${state.data.size} queries")
-                        binding.layoutEmptyState.visibility = View.GONE
-                        binding.recyclerViewQueries.visibility = View.VISIBLE
-
-                        // Log each query for debugging
-                        state.data.forEachIndexed { index, query ->
-                            Log.d(TAG, "observeViewModel: Query $index - Title: ${query.title}, Community: ${query.communityName}, CommunityId: ${query.communityId}")
-                        }
-
-                        queryAdapter.submitList(state.data)
-                    }
-                }
-
-                is UiState.Failure -> {
-                    Log.e(TAG, "observeViewModel: Failure state: ${state.error}")
-                    binding.progressBar.visibility = View.GONE
-                    binding.recyclerViewQueries.visibility = View.GONE
-                    binding.layoutEmptyState.visibility = View.VISIBLE
-
-                    val errorMessage = when {
-                        state.error.contains("permission", ignoreCase = true) ->
-                            "Permission denied. Please check your account permissions."
-                        state.error.contains("network", ignoreCase = true) ->
-                            "Network error. Please check your internet connection."
-                        else -> "Failed to load queries from your communities: ${state.error}"
-                    }
-
-                    Log.e(TAG, "observeViewModel: Showing error: $errorMessage")
-                    motionToastUtil.showFailureToast(requireActivity(), errorMessage)
-                    binding.tvEmptyMessage?.text = "Failed to load queries.\nPull down to refresh."
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                homeViewModel.uiState.collect { state ->
+                    updateUiState(state)
                 }
             }
         }
 
+        // Observe notification VM (from your original code)
         notificationViewModel.addNotification.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is UiState.Success -> {
@@ -172,18 +147,71 @@ class HomeFragment : BaseFragment() {
                         "Failed to send help request: ${state.error}"
                     )
                 }
-                is UiState.Loading -> {
-                    // Show loading if needed
+                is UiState.Loading -> { /* Loading */ }
+            }
+        }
+    }
+
+    private fun updateUiState(state: UiState<List<Any>>) {
+        binding.progressBar.visibility = View.GONE
+        binding.layoutEmptyState.visibility = View.GONE
+        binding.layoutErrorState.visibility = View.GONE
+        binding.queryRecycler.visibility = View.GONE
+        // binding.swipeRefreshLayout.isRefreshing = (state is UiState.Loading) // Optional
+
+        when (state) {
+            is UiState.Loading -> {
+                binding.progressBar.visibility = View.VISIBLE
+            }
+            is UiState.Failure -> {
+                binding.layoutErrorState.visibility = View.VISIBLE
+                binding.tvErrorMessage.text = state.error
+            }
+            is UiState.Success -> {
+                if (state.data.isEmpty()) {
+                    // Handle Empty state
+                    binding.layoutEmptyState.visibility = View.VISIBLE
+                    val isSearching = homeViewModel.searchQuery.value.isNotBlank()
+                    if (isSearching) {
+                        binding.tvEmptyMessage.text = "No results found for '${homeViewModel.searchQuery.value}'"
+                        binding.ivEmptyIcon.setImageResource(R.drawable.ic_search_empty)
+                    } else {
+                        binding.tvEmptyMessage.text = "No queries found.\nAsk one to get started!"
+                        binding.ivEmptyIcon.setImageResource(R.drawable.ic_empty_queries)
+                    }
+                } else {
+                    // We have data, show the recycler
+                    binding.queryRecycler.visibility = View.VISIBLE
+
+                    // --- Swap adapter based on data type ---
+                    when (state.data.firstOrNull()) {
+                        is QueryModel -> {
+                            binding.queryRecycler.adapter = queryAdapter
+                            queryAdapter.submitList(state.data as List<QueryModel>)
+                        }
+                        is SearchResult -> {
+                            binding.queryRecycler.adapter = searchAdapter
+                            searchAdapter.submitList(state.data as List<SearchResult>)
+                        }
+                        else -> {
+                            // Handle case where list is not empty but type is unknown
+                            binding.queryRecycler.adapter = queryAdapter
+                            queryAdapter.submitList(emptyList())
+                        }
+                    }
                 }
             }
         }
     }
+
+    // --- Click Handlers from your original file ---
 
     private fun onQueryClicked(query: QueryModel) {
         motionToastUtil.showInfoToast(
             requireActivity(),
             "Clicked on: ${query.title}"
         )
+        // TODO: Navigate to Query Detail
     }
 
     private fun onHelpClicked(query: QueryModel) {
@@ -208,11 +236,6 @@ class HomeFragment : BaseFragment() {
                 senderPhoneNumber = currentUser.mobileNumber,
                 senderEmail = currentUser.email
             )
-
-            motionToastUtil.showInfoToast(
-                requireActivity(),
-                "Sending help request to ${query.userName}..."
-            )
         } else {
             motionToastUtil.showFailureToast(
                 requireActivity(),
@@ -222,10 +245,9 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun onChatClicked(query: QueryModel) {
-        val currentUser = preferenceManager.userModel
         val currentUserId = preferenceManager.userId
 
-        if (currentUser != null && !currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty()) {
+        if (!currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty()) {
             if (currentUserId == query.userId) {
                 motionToastUtil.showWarningToast(
                     requireActivity(),
@@ -234,7 +256,6 @@ class HomeFragment : BaseFragment() {
                 return
             }
 
-            // Navigate to ChatRoomActivity
             val intent = Intent(requireContext(), ChatRoomActivity::class.java).apply {
                 putExtra(ChatRoomActivity.EXTRA_TARGET_USER_ID, query.userId)
                 putExtra(ChatRoomActivity.EXTRA_TARGET_USER_NAME, query.userName)
@@ -243,11 +264,6 @@ class HomeFragment : BaseFragment() {
                 putExtra(ChatRoomActivity.EXTRA_QUERY_TITLE, query.title)
             }
             startActivity(intent)
-
-            motionToastUtil.showInfoToast(
-                requireActivity(),
-                "Opening chat with ${query.userName}..."
-            )
         } else {
             motionToastUtil.showFailureToast(
                 requireActivity(),
@@ -256,72 +272,36 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        (activity as? AppCompatActivity)?.supportActionBar?.title = "Community Queries"
-        Log.d(TAG, "onResume: Refreshing queries")
-        loadQueries()
+    // --- Click Handler for new Search Results ---
+
+    private fun handleResultClick(result: SearchResult) {
+        Log.d(TAG, "Clicked on ${result.type}: ${result.title} (ID: ${result.id})")
+
+        when (result.type) {
+            SearchResultType.QUERY -> {
+                // TODO: Navigate to Query Detail Screen
+                motionToastUtil.showInfoToast(requireActivity(), "Clicked Query: ${result.title}")
+            }
+            SearchResultType.COMMUNITY -> {
+                val communityModel = CommunityModels(communityId = result.id, communityName = result.title)
+                val intent = Intent(requireContext(), CommunityActivity::class.java)
+                intent.putExtra("community_data", communityModel)
+                startActivity(intent)
+            }
+            SearchResultType.USER -> {
+                val intent = Intent(requireContext(), ChatRoomActivity::class.java).apply {
+                    putExtra(ChatRoomActivity.EXTRA_TARGET_USER_ID, result.id)
+                    putExtra(ChatRoomActivity.EXTRA_TARGET_USER_NAME, result.title)
+                    putExtra(ChatRoomActivity.EXTRA_TARGET_USER_IMAGE, result.imageUrl)
+                }
+                startActivity(intent)
+            }
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        binding.queryRecycler.adapter = null
         _binding = null
-    }
-    private fun debugCommunityData() {
-        val userId = preferenceManager.userId
-        Log.d(TAG, "debugCommunityData: Starting debug for userId = $userId")
-
-        if (userId.isNullOrEmpty()) {
-            Log.e(TAG, "debugCommunityData: userId is null/empty")
-            return
-        }
-
-        val database = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-
-        // 1. Check if user document exists
-        database.collection("users").document(userId).get()
-            .addOnSuccessListener { userDoc ->
-                Log.d(TAG, "debugCommunityData: User document exists: ${userDoc.exists()}")
-                Log.d(TAG, "debugCommunityData: User document data: ${userDoc.data}")
-
-                // 2. Check MyCommunity subcollection
-                database.collection("users")
-                    .document(userId)
-                    .collection("MyCommunity")
-                    .get()
-                    .addOnSuccessListener { communityDocs ->
-                        Log.d(TAG, "debugCommunityData: Found ${communityDocs.size()} community documents")
-
-                        communityDocs.documents.forEach { doc ->
-                            Log.d(TAG, "debugCommunityData: Community doc ID: ${doc.id}")
-                            Log.d(TAG, "debugCommunityData: Community doc data: ${doc.data}")
-                            val communityId = doc.getString("communityId")
-                            val communityName = doc.getString("communityName")
-                            Log.d(TAG, "debugCommunityData: Extracted - communityId: $communityId, communityName: $communityName")
-                        }
-
-                        // 3. Check all posts in the posts collection
-                        database.collection("posts").get()
-                            .addOnSuccessListener { postDocs ->
-                                Log.d(TAG, "debugCommunityData: Total posts in database: ${postDocs.size()}")
-
-                                postDocs.documents.forEach { doc ->
-                                    val title = doc.getString("title")
-                                    val communityId = doc.getString("communityId")
-                                    val communityName = doc.getString("communityName")
-                                    Log.d(TAG, "debugCommunityData: Post - Title: $title, CommunityId: $communityId, CommunityName: $communityName")
-                                }
-                            }
-                            .addOnFailureListener { exception ->
-                                Log.e(TAG, "debugCommunityData: Failed to get posts", exception)
-                            }
-                    }
-                    .addOnFailureListener { exception ->
-                        Log.e(TAG, "debugCommunityData: Failed to get user communities", exception)
-                    }
-            }
-            .addOnFailureListener { exception ->
-                Log.e(TAG, "debugCommunityData: Failed to get user document", exception)
-            }
     }
 }
