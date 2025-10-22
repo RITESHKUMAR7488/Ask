@@ -6,6 +6,9 @@ plugins {
     id("com.google.dagger.hilt.android")
     alias(libs.plugins.google.gms.google.services)
 }
+kapt {
+    correctErrorTypes = true
+}
 
 android {
     namespace = "com.example.ask"
@@ -69,6 +72,14 @@ dependencies {
     implementation(libs.glide)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.circleimageview)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx) // Check for latest version
+    implementation(libs.androidx.lifecycle.livedata.ktx) // For LiveData if preferred
+    implementation(libs.androidx.lifecycle.runtime.ktx) // For lifecycleScope
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+    kapt("com.github.bumptech.glide:compiler:4.16.0")
 
 
 }
