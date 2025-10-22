@@ -4,6 +4,7 @@ import androidx.lifecycle.MutableLiveData
 import com.example.ask.addModule.models.ImageUploadResponse
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.utilities.UiState
+import kotlinx.coroutines.flow.Flow
 import java.io.File
 
 interface RepositoryQuery {
@@ -25,6 +26,7 @@ interface RepositoryQuery {
 
     fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit)
     fun deleteQuery(queryId: String, result: (UiState<String>) -> Unit)
+    fun getQueriesFromUserCommunitiesFlow(userId: String): Flow<UiState<List<QueryModel>>>
 
 
 }

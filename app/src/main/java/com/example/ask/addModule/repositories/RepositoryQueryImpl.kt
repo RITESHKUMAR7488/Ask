@@ -8,6 +8,9 @@ import com.example.ask.addModule.models.QueryModel
 import com.example.ask.utilities.Constant
 import com.example.ask.utilities.UiState
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -338,5 +341,35 @@ class RepositoryQueryImpl @Inject constructor(
                 )
 
             }
+    }
+
+    /**
+     * --- Coroutine Usage ---
+     * `callbackFlow` is a coroutine builder that converts callback-based APIs (like your repository
+     * function) into a cold Flow stream.
+     * `trySend(UiState.Loading)` immediately emits the loading state to the collector.
+     * `getQueriesFromUserCommunities(userId) { ... }` calls your existing function.
+     * `trySend(result)` takes the final result (Success or Failure) from the callback and
+     * emits it into the flow.
+     * `close()` signals that the flow is complete, as this is a one-shot read, not a snapshot listener.
+     * `awaitClose { ... }` is required by `callbackFlow` to handle cleanup or cancellation.
+     * This allows the `HomeViewModel` to use modern, efficient Flow operators like `flatMapLatest`.
+     */
+    override fun getQueriesFromUserCommunitiesFlow(userId: String): Flow<UiState<List<QueryModel>>> = callbackFlow {
+        // Send loading state immediately
+        trySend(UiState.Loading)
+
+        // Call your existing callback function
+        getQueriesFromUserCommunities(userId) { result ->
+            // When the callback returns, send the result (Success/Failure) to the flow
+            trySend(result)
+            // Since this is a one-shot operation, close the flow
+            close()
+        }
+
+        // Keep the flow open until close() is called or the coroutine is cancelled
+        awaitClose {
+            Log.d(TAG, "getQueriesFromUserCommunitiesFlow flow was closed/cancelled.")
+        }
     }
 }
