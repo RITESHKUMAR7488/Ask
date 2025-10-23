@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.Observer // Import this
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,8 +18,7 @@ import com.example.ask.addModule.models.QueryModel
 import com.example.ask.chatModule.uis.activities.ChatRoomActivity
 import com.example.ask.communityModule.models.CommunityModels
 import com.example.ask.communityModule.uis.CommunityActivity
-import com.example.ask.databinding.FragmentHome2Binding
-import com.example.ask.databinding.FragmentHomeBinding // Make sure to use fragment_home.xml
+import com.example.ask.databinding.FragmentHome2Binding // Using the binding from your file
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.mainModule.viewModels.HomeViewModel
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
@@ -34,14 +34,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class HomeFragment : BaseFragment() {
 
-    // Make sure this binding class matches your XML file name (e.g., fragment_home.xml)
+    // Using FragmentHome2Binding as seen in your provided file
     private var _binding: FragmentHome2Binding? = null
     private val binding get() = _binding!!
 
-    // Use the new HomeViewModel for search and queries
     private val homeViewModel: HomeViewModel by viewModels()
-
-    // ViewModel for sending notifications (from your original file)
     private val notificationViewModel: NotificationViewModel by viewModels()
 
     private lateinit var queryAdapter: QueryAdapter
@@ -55,8 +52,6 @@ class HomeFragment : BaseFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Ensure this layout file 'fragment_home.xml' is the one I provided,
-        // which includes the SearchView and state layouts.
         _binding = FragmentHome2Binding.inflate(inflater, container, false)
         return binding.root
     }
@@ -71,26 +66,23 @@ class HomeFragment : BaseFragment() {
     }
 
     private fun setupRecyclerViews() {
-        // 1. Setup Query Adapter (providing all three required parameters)
         queryAdapter = QueryAdapter(
             context = requireContext(),
             onQueryClick = { query ->
-                onQueryClicked(query) // Use your existing handler
+                onQueryClicked(query)
             },
             onHelpClick = { query ->
-                onHelpClicked(query) // Use your existing handler
+                onHelpClicked(query)
             },
             onChatClick = { query ->
-                onChatClicked(query) // Use your existing handler
+                onChatClicked(query)
             }
         )
 
-        // 2. Setup Search Adapter
         searchAdapter = SearchResultAdapter(requireContext()) { result ->
             handleResultClick(result)
         }
 
-        // Set up the RecyclerView
         binding.queryRecycler.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = queryAdapter // Start with query adapter
@@ -117,25 +109,32 @@ class HomeFragment : BaseFragment() {
         binding.btnRetry.setOnClickListener {
             homeViewModel.retry()
         }
-
-        // The setOnMenuItemClickListener that caused the error has been removed.
     }
 
-    // --- Coroutine Usage ---
-    // Safely collects the single UI state from the HomeViewModel.
     private fun observeViewModel() {
+        // --- Coroutine Usage Explanation ---
+        // We are using viewModelScope.launch to start a coroutine that is tied
+        // to the Fragment's view lifecycle.
+        // The repeatOnLifecycle(Lifecycle.State.STARTED) block ensures that
+        // the coroutine only collects (listens for) data from the 'uiState' Flow
+        // when the Fragment is in the STARTED state (visible).
+        // This is good because it prevents the app from doing UI work when
+        // the fragment isn't visible, saving resources and preventing crashes.
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 homeViewModel.uiState.collect { state ->
-                    updateUiState(state)
+                    // Type argument <List<Any>> is specified
+                    updateUiState(state as UiState<List<Any>>)
                 }
             }
         }
 
-        // Observe notification VM (from your original code)
-        notificationViewModel.addNotification.observe(viewLifecycleOwner) { state ->
+        // Observe notification VM
+        // This observes the new 'addNotificationState' LiveData
+        notificationViewModel.addNotificationState.observe(viewLifecycleOwner, Observer { state ->
             when (state) {
-                is UiState.Success -> {
+                // We explicitly define the type <String> for Success
+                is UiState.Success<String> -> {
                     motionToastUtil.showSuccessToast(
                         requireActivity(),
                         "Help request sent successfully! 🤝"
@@ -149,7 +148,7 @@ class HomeFragment : BaseFragment() {
                 }
                 is UiState.Loading -> { /* Loading */ }
             }
-        }
+        })
     }
 
     private fun updateUiState(state: UiState<List<Any>>) {
@@ -157,7 +156,6 @@ class HomeFragment : BaseFragment() {
         binding.layoutEmptyState.visibility = View.GONE
         binding.layoutErrorState.visibility = View.GONE
         binding.queryRecycler.visibility = View.GONE
-        // binding.swipeRefreshLayout.isRefreshing = (state is UiState.Loading) // Optional
 
         when (state) {
             is UiState.Loading -> {
@@ -167,7 +165,8 @@ class HomeFragment : BaseFragment() {
                 binding.layoutErrorState.visibility = View.VISIBLE
                 binding.tvErrorMessage.text = state.error
             }
-            is UiState.Success -> {
+            // Explicitly define the type <List<Any>> for Success
+            is UiState.Success<List<Any>> -> {
                 if (state.data.isEmpty()) {
                     // Handle Empty state
                     binding.layoutEmptyState.visibility = View.VISIBLE
@@ -194,7 +193,6 @@ class HomeFragment : BaseFragment() {
                             searchAdapter.submitList(state.data as List<SearchResult>)
                         }
                         else -> {
-                            // Handle case where list is not empty but type is unknown
                             binding.queryRecycler.adapter = queryAdapter
                             queryAdapter.submitList(emptyList())
                         }
@@ -203,8 +201,6 @@ class HomeFragment : BaseFragment() {
             }
         }
     }
-
-    // --- Click Handlers from your original file ---
 
     private fun onQueryClicked(query: QueryModel) {
         motionToastUtil.showInfoToast(
@@ -227,6 +223,7 @@ class HomeFragment : BaseFragment() {
                 return
             }
 
+            // This function now exists in the ViewModel and has all parameters
             notificationViewModel.sendHelpNotification(
                 targetUserId = query.userId!!,
                 queryTitle = query.title ?: "Unknown Query",
@@ -234,7 +231,8 @@ class HomeFragment : BaseFragment() {
                 senderName = currentUser.fullName ?: "Unknown User",
                 senderUserId = currentUserId,
                 senderPhoneNumber = currentUser.mobileNumber,
-                senderEmail = currentUser.email
+                senderEmail = currentUser.email,
+                senderProfileImage = currentUser.imageUrl // Pass the profile image
             )
         } else {
             motionToastUtil.showFailureToast(
@@ -271,8 +269,6 @@ class HomeFragment : BaseFragment() {
             )
         }
     }
-
-    // --- Click Handler for new Search Results ---
 
     private fun handleResultClick(result: SearchResult) {
         Log.d(TAG, "Clicked on ${result.type}: ${result.title} (ID: ${result.id})")

@@ -137,20 +137,7 @@ class MyQueriesActivity : BaseActivity() {
             }
         }
 
-        // Observe help notifications
-        notificationViewModel.addNotification.observe(this) { state ->
-            when (state) {
-                is UiState.Success -> {
-                    motionToastUtil.showSuccessToast(this, "Help request sent successfully! 🤝")
-                }
-                is UiState.Failure -> {
-                    motionToastUtil.showFailureToast(this, "Failed to send help request: ${state.error}")
-                }
-                is UiState.Loading -> {
-                    // Show loading if needed
-                }
-            }
-        }
+
 
         // Observe delete query
         addViewModel.deleteQuery.observe(this) { state ->

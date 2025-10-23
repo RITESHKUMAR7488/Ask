@@ -10,8 +10,11 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.ask.R
+// Use the correct binding class generated from item_notification.xml
 import com.example.ask.databinding.ItemNotificationBinding
 import com.example.ask.notificationModule.models.NotificationModel
+// Import the utils to format time
+import com.example.ask.notificationModule.utils.NotificationUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -21,6 +24,7 @@ class NotificationAdapter(
 ) : ListAdapter<NotificationModel, NotificationAdapter.NotificationViewHolder>(NotificationDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotificationViewHolder {
+        // Inflate using the correct binding class
         val binding = ItemNotificationBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
@@ -33,132 +37,78 @@ class NotificationAdapter(
         holder.bind(getItem(position))
     }
 
-    inner class NotificationViewHolder(private val binding: ItemNotificationBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+    inner class NotificationViewHolder(
+        // Use the correct binding class
+        private val binding: ItemNotificationBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(notification: NotificationModel) {
             with(binding) {
-                tvTitle.text = notification.title
-                tvMessage.text = notification.message
-                tvTimestamp.text = formatTimestamp(notification.timestamp ?: 0L)
+                // --- BIND DATA TO CORRECT VIEW IDs ---
+                notificationTitle.text = notification.title // Use notificationTitle
+                notificationMessage.text = notification.message // Use notificationMessage
+                notificationTime.text = NotificationUtils.getTimeAgo(notification.timestamp ?: 0L) // Use notificationTime and util
 
-                // Setup notification type UI
+                // Setup notification type UI (Icon and Chip)
                 setupNotificationType(notification.type)
 
-                // Show/hide unread indicator
-                setupReadStatus(notification.isRead)
+                // Show/hide unread indicator (Use unreadIndicator)
+                unreadIndicator.visibility = if (notification.isRead) View.GONE else View.VISIBLE
 
-                // Setup sender info if available
-                setupSenderInfo(notification)
+                // Adjust alpha based on read status
+                notificationCard.alpha = if (notification.isRead) 0.7f else 1.0f
 
                 // Click listener
-                root.setOnClickListener {
+                notificationCard.setOnClickListener { // Set listener on the card
                     onNotificationClick(notification)
                 }
+                // --- END BINDING ---
             }
         }
 
         private fun setupNotificationType(type: String?) {
             with(binding) {
+                // Use notificationIcon and notificationTypeChip
                 when (type) {
                     "HELP_REQUEST" -> {
-                        ivNotificationIcon.setImageResource(R.drawable.ic_help)
-                        ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.primary_color))
-                        chipType.text = "Help Request"
-                        chipType.setChipBackgroundColorResource(R.color.help_chip_color)
-                        chipType.setTextColor(ContextCompat.getColor(context, R.color.primary_color))
+                        notificationIcon.setImageResource(R.drawable.ic_help)
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.help_chip_color) // Example color
+                        notificationTypeChip.text = "Help"
+                        notificationTypeChip.visibility = View.VISIBLE
                     }
                     "QUERY_UPDATE" -> {
-                        ivNotificationIcon.setImageResource(R.drawable.ic_update)
-                        ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.success_color))
-                        chipType.text = "Query Update"
-                        chipType.setChipBackgroundColorResource(R.color.update_chip_color)
-                        chipType.setTextColor(ContextCompat.getColor(context, R.color.success_color))
+                        notificationIcon.setImageResource(R.drawable.ic_update)
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.update_chip_color) // Example color
+                        notificationTypeChip.text = "Update"
+                        notificationTypeChip.visibility = View.VISIBLE
                     }
                     "COMMUNITY_INVITE" -> {
-                        ivNotificationIcon.setImageResource(R.drawable.ic_group)
-                        ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.secondary_color))
-                        chipType.text = "Community"
-                        chipType.setChipBackgroundColorResource(R.color.community_chip_color)
-                        chipType.setTextColor(ContextCompat.getColor(context, R.color.secondary_color))
+                        notificationIcon.setImageResource(R.drawable.ic_group)
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.community_chip_color) // Example color
+                        notificationTypeChip.text = "Invite"
+                        notificationTypeChip.visibility = View.VISIBLE
                     }
                     "RESPONSE" -> {
-                        ivNotificationIcon.setImageResource(R.drawable.ic_comment)
-                        ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.info_color))
-                        chipType.text = "Response"
-                        chipType.setChipBackgroundColorResource(R.color.response_chip_color)
-                        chipType.setTextColor(ContextCompat.getColor(context, R.color.info_color))
+                        notificationIcon.setImageResource(R.drawable.ic_comment)
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.response_chip_color) // Example color
+                        notificationTypeChip.text = "Response"
+                        notificationTypeChip.visibility = View.VISIBLE
                     }
+                    "CHAT" -> {
+                        notificationIcon.setImageResource(R.drawable.ic_chat) // Assuming you have an ic_chat icon
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.info_color) // Example color
+                        notificationTypeChip.text = "Chat"
+                        notificationTypeChip.visibility = View.VISIBLE
+                    }
+                    // Add cases for other types like COMMUNITY_JOIN if needed
                     else -> {
-                        ivNotificationIcon.setImageResource(R.drawable.ic_notification)
-                        ivNotificationIcon.setColorFilter(ContextCompat.getColor(context, R.color.gray_600))
-                        chipType.text = "Notification"
-                        chipType.setChipBackgroundColorResource(R.color.chip_background)
-                        chipType.setTextColor(ContextCompat.getColor(context, R.color.gray_600))
+                        notificationIcon.setImageResource(R.drawable.ic_notification)
+                        iconContainer.backgroundTintList = ContextCompat.getColorStateList(context, R.color.gray_300) // Default color
+                        notificationTypeChip.visibility = View.GONE // Hide chip for generic/unknown
                     }
                 }
-            }
-        }
-
-        private fun setupReadStatus(isRead: Boolean) {
-            with(binding) {
-                if (isRead) {
-                    // Read notification styling
-                    root.alpha = 0.75f
-                    viewUnreadIndicator.visibility = View.GONE
-                    tvTitle.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                    tvMessage.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
-                    chipType.alpha = 0.7f
-                } else {
-                    // Unread notification styling
-                    root.alpha = 1.0f
-                    viewUnreadIndicator.visibility = View.VISIBLE
-                    tvTitle.setTextColor(ContextCompat.getColor(context, R.color.text_primary))
-                    tvMessage.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
-                    chipType.alpha = 1.0f
-                }
-            }
-        }
-
-        private fun setupSenderInfo(notification: NotificationModel) {
-            with(binding) {
-                if (!notification.senderUserName.isNullOrEmpty()) {
-                    layoutSenderInfo.visibility = View.VISIBLE
-                    tvSenderName.text = notification.senderUserName
-
-                    // Load sender profile image if available
-                    if (!notification.senderProfileImage.isNullOrEmpty()) {
-                        Glide.with(context)
-                            .load(notification.senderProfileImage)
-                            .placeholder(R.drawable.ic_person)
-                            .error(R.drawable.ic_person)
-                            .circleCrop()
-                            .into(ivSenderProfile)
-                    } else {
-                        ivSenderProfile.setImageResource(R.drawable.ic_person)
-                    }
-                } else {
-                    layoutSenderInfo.visibility = View.GONE
-                }
-            }
-        }
-
-        private fun formatTimestamp(timestamp: Long): String {
-            if (timestamp <= 0) return "Unknown"
-
-            val now = System.currentTimeMillis()
-            val difference = now - timestamp
-
-            return when {
-                difference < 60_000 -> "Just now"
-                difference < 3600_000 -> "${difference / 60_000}m ago"
-                difference < 86400_000 -> "${difference / 3600_000}h ago"
-                difference < 604800_000 -> "${difference / 86400_000}d ago"
-                difference < 2_592_000_000 -> "${difference / 604800_000}w ago" // 30 days
-                else -> {
-                    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                    sdf.format(Date(timestamp))
-                }
+                // Ensure icon tint matches container for better visuals if needed
+                notificationIcon.imageTintList = ContextCompat.getColorStateList(context, R.color.white) // Assuming white icon on colored background
             }
         }
     }
@@ -169,28 +119,7 @@ class NotificationAdapter(
         }
 
         override fun areContentsTheSame(oldItem: NotificationModel, newItem: NotificationModel): Boolean {
-            return oldItem == newItem
+            return oldItem == newItem // Relies on NotificationModel being a data class
         }
-    }
-
-    // Helper function to get unread count
-    fun getUnreadCount(): Int {
-        return currentList.count { !it.isRead }
-    }
-
-    // Helper function to mark all as read (UI update)
-    fun markAllAsRead() {
-        val updatedList = currentList.map { it.copy(isRead = true) }
-        submitList(updatedList)
-    }
-
-    // Helper function to get total count
-    fun getTotalCount(): Int {
-        return currentList.size
-    }
-
-    // Helper function to check if there are any notifications
-    fun hasNotifications(): Boolean {
-        return currentList.isNotEmpty()
     }
 }

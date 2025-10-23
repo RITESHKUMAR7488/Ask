@@ -11,9 +11,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog // Import this
 import androidx.core.view.GravityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer // Import this
 import com.bumptech.glide.Glide
 import com.example.ask.R
 import com.example.ask.addModule.uis.ChooseCommunityActivity
@@ -22,6 +24,7 @@ import com.example.ask.communityModule.uis.fragments.CommunityFragment
 import com.example.ask.databinding.ActivityMainScreenBinding
 import com.example.ask.mainModule.uis.fragments.HomeFragment
 import com.example.ask.mainModule.uis.activities.MyQueriesActivity
+import com.example.ask.notificationModule.models.NotificationModel // Import this model
 import com.example.ask.notificationModule.uis.NotificationActivity
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
@@ -83,7 +86,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         setupNotificationBell()
 
         // Observe notification count
-        observeNotifications()
+        observeNotifications() // <-- FIX: Call the correct function
 
         // Setup menu button functionality
         setupMenuButton()
@@ -246,7 +249,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
             startActivity(intent)
 
             // Show feedback
-            motionToastUtil.showInfoToast(this, "Opening notifications...")
+            // motionToastUtil.showInfoToast(this, "Opening notifications...") // Optional: can be removed
         }
     }
 
@@ -313,7 +316,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
      * Show logout confirmation dialog
      */
     private fun showLogoutConfirmation() {
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this) // Use androidx.appcompat.app.AlertDialog
             .setTitle("Logout")
             .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Yes") { _, _ ->
@@ -343,21 +346,25 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
     /**
      * Observe notifications and update badge
      */
+    // --- START OF FIXES ---
     private fun observeNotifications() {
         val userId = preferenceManager.userId
         Log.d(TAG, "observeNotifications: userId = $userId")
 
         if (!userId.isNullOrEmpty()) {
-            // Load unread notification count
-            notificationViewModel.getUnreadNotificationCount(userId)
+            // **FIX:** Call getUserNotifications(). This sets up the listener.
+            notificationViewModel.getUserNotifications()
 
-            // Observe unread count
-            notificationViewModel.unreadCount.observe(this) { state ->
+            // **FIX:** Observe 'userNotifications' (plural)
+            notificationViewModel.userNotifications.observe(this, Observer { state ->
                 Log.d(TAG, "Notification state received: $state")
                 when (state) {
-                    is UiState.Success -> {
-                        Log.d(TAG, "Unread notification count: ${state.data}")
-                        updateNotificationBadge(state.data)
+                    // **FIX:** Specify the type for Success and check data
+                    is UiState.Success<List<NotificationModel>> -> {
+                        // **FIX:** 'state.data' is the list. Count the unread items.
+                        val unreadCount = state.data?.count { !it.isRead } ?: 0
+                        Log.d(TAG, "Unread notification count: $unreadCount")
+                        updateNotificationBadge(unreadCount)
                     }
                     is UiState.Failure -> {
                         Log.e(TAG, "Failed to get unread count: ${state.error}")
@@ -369,11 +376,12 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
                         // Keep current state while loading
                     }
                 }
-            }
+            })
         } else {
             Log.w(TAG, "UserId is null or empty, cannot observe notifications")
         }
     }
+    // --- END OF FIXES ---
 
     /**
      * Update notification badge count with improved visibility
@@ -408,7 +416,7 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
     private fun replaceFragment(fragment: Fragment, title: String) {
         val fragmentTransaction = supportFragmentManager.beginTransaction()
         fragmentTransaction.replace(R.id.frameLayout, fragment)
-        fragmentTransaction.addToBackStack(null)
+        fragmentTransaction.addToBackStack(null) // Keep this if you want back stack navigation
         fragmentTransaction.commit()
 
         // Update toolbar title dynamically
@@ -419,12 +427,8 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
         super.onResume()
         Log.d(TAG, "onResume called")
 
-        // Refresh notification count when activity resumes
-        val userId = preferenceManager.userId
-        if (!userId.isNullOrEmpty()) {
-            Log.d(TAG, "Refreshing notification count for user: $userId")
-            notificationViewModel.getUnreadNotificationCount(userId)
-        }
+        // **FIX:** The listener from 'observeNotifications' is already active
+        // and will provide live updates. No need to re-fetch.
 
         // Refresh navigation header in case user data changed
         setupNavigationHeader()
@@ -433,6 +437,9 @@ class MainScreen : BaseActivity(), NavigationView.OnNavigationItemSelectedListen
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy called")
-        notificationViewModel.removeNotificationListener()
+        // **FIX:** There is no 'removeNotificationListener()' function to call.
+        // The listener is tied to the ViewModel's lifecycle,
+        // or in this case, the callback is tied to the Activity's lifecycle.
+        // It will be cleaned up automatically.
     }
 }

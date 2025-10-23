@@ -56,4 +56,16 @@ class MotionToastUtil @Inject constructor() {
             null
         )
     }
+    fun showErrorToast(activity: Activity, message: String, duration: Long = MotionToast.LONG_DURATION) {
+        MotionToast.createColorToast(
+            activity,
+            "Error",
+            message,
+            MotionToastStyle.ERROR,
+            MotionToast.GRAVITY_BOTTOM,
+            duration,
+            null
+        )
+
+    }
 }
