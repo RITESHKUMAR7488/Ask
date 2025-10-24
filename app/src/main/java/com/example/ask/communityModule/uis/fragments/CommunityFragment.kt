@@ -1,5 +1,8 @@
 package com.example.ask.communityModule.uis.fragments
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -201,21 +204,25 @@ class CommunityFragment : BaseFragment() {
         val btnView = bottomSheetView.findViewById<View>(R.id.btnViewCommunity)
         val btnLeave = bottomSheetView.findViewById<View>(R.id.btnLeaveCommunity)
         val btnDelete = bottomSheetView.findViewById<View>(R.id.btnDeleteCommunity)
+        val btnCopyCode = bottomSheetView.findViewById<View>(R.id.btnCopyCode)
         val btnCancel = bottomSheetView.findViewById<View>(R.id.btnCancel)
 
         // Show/hide based on role
         when (community.role?.lowercase()) {
             "admin" -> {
                 btnDelete.visibility = View.VISIBLE
+                btnCopyCode.visibility = View.VISIBLE
                 btnLeave.visibility = View.GONE
             }
             "member" -> {
                 btnLeave.visibility = View.VISIBLE
                 btnDelete.visibility = View.GONE
+                btnCopyCode.visibility = View.GONE
             }
             else -> {
                 btnLeave.visibility = View.GONE
                 btnDelete.visibility = View.GONE
+                btnCopyCode.visibility = View.GONE
             }
         }
 
@@ -236,9 +243,30 @@ class CommunityFragment : BaseFragment() {
             showDeleteCommunityConfirmation(community)
         }
 
+        // ✅ CORRECTED: Use communityCode instead of communityId
+        btnCopyCode.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            community.communityCode?.let { code ->
+                copyCommunityCodeToClipboard(code)
+            }
+        }
+
         btnCancel.setOnClickListener {
             bottomSheetDialog.dismiss()
         }
+    }
+
+    // ✅ New helper function to copy text to clipboard
+    private fun copyCommunityCodeToClipboard(code: String) {
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Community Code", code)
+        clipboard.setPrimaryClip(clip)
+
+        motionToastUtil.showSuccessToast(
+            requireActivity(),
+            "Community code copied to clipboard",
+            MotionToast.SHORT_DURATION
+        )
     }
 
     private fun showLeaveCommunityConfirmation(community: CommunityModels) {
