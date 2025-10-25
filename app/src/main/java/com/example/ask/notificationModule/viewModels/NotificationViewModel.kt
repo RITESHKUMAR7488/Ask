@@ -28,15 +28,13 @@ class NotificationViewModel @Inject constructor(
     private val _markAllAsReadState = MutableLiveData<UiState<Unit>>()
     val markAllAsReadState: LiveData<UiState<Unit>> = _markAllAsReadState
 
-    // --- FIX: Add LiveData for sending notifications ---
     private val _addNotificationState = MutableLiveData<UiState<String>>()
     val addNotificationState: LiveData<UiState<String>> = _addNotificationState
-    // --- End of FIX ---
 
 
     fun getUserNotifications() {
         val userId = preferenceManager.userId
-        if (userId != null) {
+        if (userId != null && userId.isNotEmpty()) { // Check for not empty
             repository.getUserNotifications(userId) {
                 _userNotifications.value = it
             }
@@ -45,25 +43,43 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * --- COROUTINE USAGE ---
+     * This function uses 'viewModelScope.launch' to start a new coroutine
+     * on the main thread. Inside the coroutine, it calls the 'suspend' function
+     * 'repository.markNotificationAsRead'. This allows the UI to remain responsive
+     * while the background database operation completes.
+     */
     fun markNotificationAsRead(notificationId: String) {
         viewModelScope.launch {
             val userId = preferenceManager.userId
-            if (userId != null) {
+            if (userId != null && userId.isNotEmpty()) {
+                // The repository function is a suspend function and is safely
+                // called within the coroutine.
                 val result = repository.markNotificationAsRead(userId, notificationId)
                 if (result is UiState.Failure) {
                     _markAsReadState.value = result
                 }
+                // Success is handled by the snapshot listener in getUserNotifications
             } else {
                 _markAsReadState.value = UiState.Failure("User not logged in")
             }
         }
     }
 
+    /**
+     * --- COROUTINE USAGE ---
+     * This function also uses 'viewModelScope.launch' to run a background task.
+     * It calls the 'suspend' function 'repository.markAllNotificationsAsRead'.
+     * This is crucial because marking all notifications could be a heavy
+     * operation, and doing it on the main thread would freeze the app.
+     */
     fun markAllNotificationsAsRead() {
         viewModelScope.launch {
             _markAllAsReadState.value = UiState.Loading
             val userId = preferenceManager.userId
-            if (userId != null) {
+            if (userId != null && userId.isNotEmpty()) {
+                // Safely calling the suspend function
                 val result = repository.markAllNotificationsAsRead(userId)
                 _markAllAsReadState.value = result
             } else {
@@ -72,42 +88,40 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    // --- FIX: Add function to send a help notification ---
     /**
      * Creates and sends a "Help Request" notification to a target user.
-     * This uses coroutines as per your preference by wrapping the callback.
+     * This function itself doesn't need to be a suspend function because
+     * the repository's 'addNotification' uses a callback, which is already
+     * asynchronous.
      */
-    // ... (inside NotificationViewModel class)
-
-    // --- FIX: Add function to send a help notification ---
     fun sendHelpNotification(
         targetUserId: String,
         queryTitle: String,
         queryId: String,
+        communityId: String, // <-- FIX: Added this parameter
         senderName: String,
         senderUserId: String,
         senderPhoneNumber: String?,
         senderEmail: String?,
-        senderProfileImage: String? // <-- Add this parameter
+        senderProfileImage: String?
     ) {
         _addNotificationState.value = UiState.Loading
 
-        // --- FIX: Use the correct function name ---
         val notification = NotificationUtils.createHelpRequestNotification(
-            targetUserId = targetUserId, // Pass targetUserId to the correct parameter
+            targetUserId = targetUserId,
             queryTitle = queryTitle,
             queryId = queryId,
-            senderUserName = senderName, // Pass senderName to senderUserName
+            communityId = communityId, // <-- FIX: Pass it here
+            senderUserName = senderName,
             senderUserId = senderUserId,
             senderPhoneNumber = senderPhoneNumber,
             senderEmail = senderEmail,
-            senderProfileImage = senderProfileImage // <-- Pass it here
+            senderProfileImage = senderProfileImage
         )
 
+        // The repository handles this asynchronously with a callback
         repository.addNotification(targetUserId, notification) { state ->
-            _addNotificationState.postValue(state)
+            _addNotificationState.postValue(state) // Use postValue if called from bg thread
         }
     }
-// ... (rest of the class)
-    // --- End of FIX ---
 }

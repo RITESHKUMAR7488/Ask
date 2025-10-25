@@ -26,6 +26,7 @@ import com.example.ask.mainModule.uis.fragments.HomeFragment
 import com.example.ask.mainModule.uis.activities.MyQueriesActivity
 import com.example.ask.notificationModule.models.NotificationModel // Import this model
 import com.example.ask.notificationModule.uis.NotificationActivity
+
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.onBoardingModule.uis.FirstScreen
 import com.example.ask.profileModule.uis.ProfileFragment
