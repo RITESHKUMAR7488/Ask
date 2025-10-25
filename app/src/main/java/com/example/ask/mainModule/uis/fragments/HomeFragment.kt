@@ -29,6 +29,7 @@ import com.example.ask.utilities.BaseFragment
 import com.example.ask.utilities.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import com.example.ask.mainModule.uis.activities.QueryDetailActivity
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -71,7 +72,9 @@ class HomeFragment : BaseFragment() {
         queryAdapter = QueryAdapter(
             context = requireContext(),
             onQueryClick = { query ->
-                onQueryClicked(query)
+                val intent = Intent(requireContext(), QueryDetailActivity::class.java)
+                intent.putExtra(QueryDetailActivity.EXTRA_QUERY, query) // Pass the whole object
+                startActivity(intent)
             },
             onHelpClick = { query ->
                 onHelpClicked(query)
@@ -206,13 +209,13 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-    private fun onQueryClicked(query: QueryModel) {
-        motionToastUtil.showInfoToast(
-            requireActivity(),
-            "Clicked on: ${query.title}"
-        )
-        // TODO: Navigate to Query Detail
-    }
+//    private fun onQueryClicked(query: QueryModel) {
+//        motionToastUtil.showInfoToast(
+//            requireActivity(),
+//            "Clicked on: ${query.title}"
+//        )
+//        // TODO: Navigate to Query Detail
+//    }
 
     // --- THIS FUNCTION IS FIXED ---
     private fun onHelpClicked(query: QueryModel) {
