@@ -12,7 +12,7 @@ import java.util.Date
 import java.util.Locale
 
 class MyCommunityAdapter(
-    private val onCommunityClick: (CommunityModels) -> Unit = {}
+    private val onViewCommunityClick: (CommunityModels) -> Unit = {}
 ) : ListAdapter<CommunityModels, MyCommunityAdapter.CommunityViewHolder>(CommunityDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CommunityViewHolder {
@@ -43,7 +43,7 @@ class MyCommunityAdapter(
                 else -> tvRole.setBackgroundResource(android.R.color.darker_gray)
             }
 
-            root.setOnClickListener { onCommunityClick(community) }
+            root.setOnClickListener { onViewCommunityClick(community) }
         }
 
         private fun formatJoinedDate(timestamp: Long?): String {

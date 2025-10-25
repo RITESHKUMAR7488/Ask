@@ -372,4 +372,30 @@ class RepositoryQueryImpl @Inject constructor(
             Log.d(TAG, "getQueriesFromUserCommunitiesFlow flow was closed/cancelled.")
         }
     }
+
+    // --- Coroutine Usage ---
+// This function uses callbacks but performs an asynchronous Firestore query.
+// The ViewModel calls this function within a coroutine scope.
+    override fun getCommunityPosts(communityId: String, result: (UiState<List<QueryModel>>) -> Unit) {
+        Log.d(TAG, "getCommunityPosts: Fetching posts for communityId=$communityId")
+        result.invoke(UiState.Loading)
+
+        database.collection(Constant.POSTS)
+            .whereEqualTo("communityId", communityId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { documents ->
+                val posts = documents.toObjects(QueryModel::class.java)
+                Log.d(TAG, "getCommunityPosts: Found ${posts.size} posts for community $communityId")
+                result.invoke(UiState.Success(posts))
+            }
+            .addOnFailureListener { exception ->
+                Log.e(TAG, "getCommunityPosts: Failed for community $communityId", exception)
+                result.invoke(
+                    UiState.Failure(
+                        exception.localizedMessage ?: "Failed to fetch community posts"
+                    )
+                )
+            }
+    }
 }

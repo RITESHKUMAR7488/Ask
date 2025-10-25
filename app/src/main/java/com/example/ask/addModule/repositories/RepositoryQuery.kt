@@ -27,6 +27,7 @@ interface RepositoryQuery {
     fun updateQueryStatus(queryId: String, status: String, result: (UiState<String>) -> Unit)
     fun deleteQuery(queryId: String, result: (UiState<String>) -> Unit)
     fun getQueriesFromUserCommunitiesFlow(userId: String): Flow<UiState<List<QueryModel>>>
+    fun getCommunityPosts(communityId: String, result: (UiState<List<QueryModel>>) -> Unit) // Add this
 
 
 }

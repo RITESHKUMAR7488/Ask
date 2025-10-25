@@ -4,16 +4,15 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
     <uses-permission android:name="android.permission.VIBRATE" />
-
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <queries>
         <package android:name="com.whatsapp" />
-        <package android:name="com.whatsapp.w4b" /> </queries>
+        <package android:name="com.whatsapp.w4b" />
+    </queries>
 
     <application
         android:name=".MyApplication"
@@ -25,35 +24,30 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Ask">
-
+        <activity
+            android:name=".communityModule.uis.Activities.CommunityPostsActivity"
+            android:exported="false" />
         <activity
             android:name=".chatModule.uis.activities.ChatRoomActivity"
             android:exported="false" />
-
         <activity
             android:name=".mainModule.uis.activities.MyQueriesActivity"
             android:exported="false" />
-
         <activity
             android:name=".notificationModule.uis.NotificationActivity"
             android:exported="false" />
-
         <activity
             android:name=".addModule.uis.ChooseCommunityActivity"
             android:exported="false" />
-
         <activity
             android:name=".communityModule.uis.Activities.JoinCommunity"
             android:exported="false" />
-
         <activity
             android:name=".communityModule.uis.CommunityActivity"
             android:exported="false" />
-
         <activity
             android:name=".communityModule.uis.Activities.CreateCommunityActivity"
             android:exported="false" />
-
         <activity
             android:name=".addModule.uis.AddQueryActivity"
             android:exported="false" />
@@ -61,35 +55,31 @@
             android:name=".mainModule.uis.activities.QueryDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.Ask" />
-
         <activity
             android:name=".mainModule.uis.activities.MainScreen"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".onBoardingModule.uis.SplashScreenActivity"
             android:exported="true"
             android:theme="@style/SplashTheme">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
-
-
         <activity
             android:name=".onBoardingModule.uis.SignInActivity"
             android:exported="false" />
-
         <activity
             android:name=".onBoardingModule.uis.RegisterActivity"
             android:exported="false" />
-
         <activity
             android:name=".onBoardingModule.uis.FirstScreen"
             android:exported="false" />
