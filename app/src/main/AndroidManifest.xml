@@ -57,6 +57,10 @@
         <activity
             android:name=".addModule.uis.AddQueryActivity"
             android:exported="false" />
+        <activity
+            android:name=".mainModule.uis.activities.QueryDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Ask" />
 
         <activity
             android:name=".mainModule.uis.activities.MainScreen"
