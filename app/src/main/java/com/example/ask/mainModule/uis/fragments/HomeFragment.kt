@@ -16,8 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.R
 import com.example.ask.addModule.models.QueryModel
 import com.example.ask.chatModule.uis.activities.ChatRoomActivity
-import com.example.ask.communityModule.models.CommunityModels
-import com.example.ask.communityModule.uis.CommunityActivity
+import com.example.ask.communityModule.uis.Activities.CommunityPostsActivity
 import com.example.ask.databinding.FragmentHome2Binding // Using the binding from your file
 import com.example.ask.mainModule.adapters.QueryAdapter
 import com.example.ask.mainModule.viewModels.HomeViewModel
@@ -209,14 +208,6 @@ class HomeFragment : BaseFragment() {
         }
     }
 
-//    private fun onQueryClicked(query: QueryModel) {
-//        motionToastUtil.showInfoToast(
-//            requireActivity(),
-//            "Clicked on: ${query.title}"
-//        )
-//        // TODO: Navigate to Query Detail
-//    }
-
     // --- THIS FUNCTION IS FIXED ---
     private fun onHelpClicked(query: QueryModel) {
         val currentUser = preferenceManager.userModel
@@ -280,19 +271,31 @@ class HomeFragment : BaseFragment() {
         }
     }
 
+    // --- FUNCTION UPDATED ---
     private fun handleResultClick(result: SearchResult) {
         Log.d(TAG, "Clicked on ${result.type}: ${result.title} (ID: ${result.id})")
 
         when (result.type) {
             SearchResultType.QUERY -> {
-                // TODO: Navigate to Query Detail Screen
-                motionToastUtil.showInfoToast(requireActivity(), "Clicked Query: ${result.title}")
+                // --- IMPLEMENTED NAVIGATION ---
+                // A search result might not have the full QueryModel object.
+                // We pass the ID to QueryDetailActivity, which can then fetch the full query.
+                // (This assumes QueryDetailActivity can handle receiving just an ID)
+                val intent = Intent(requireContext(), QueryDetailActivity::class.java).apply {
+                    putExtra(QueryDetailActivity.EXTRA_QUERY_ID, result.id)
+                }
+                startActivity(intent)
+                // --- END IMPLEMENTATION ---
             }
             SearchResultType.COMMUNITY -> {
-                val communityModel = CommunityModels(communityId = result.id, communityName = result.title)
-                val intent = Intent(requireContext(), CommunityActivity::class.java)
-                intent.putExtra("community_data", communityModel)
+                // --- UPDATED NAVIGATION ---
+                // This now navigates to the new CommunityPostsActivity
+                val intent = Intent(requireContext(), CommunityPostsActivity::class.java).apply {
+                    putExtra(CommunityPostsActivity.EXTRA_COMMUNITY_ID, result.id)
+                    putExtra(CommunityPostsActivity.EXTRA_COMMUNITY_NAME, result.title)
+                }
                 startActivity(intent)
+                // --- END UPDATE ---
             }
             SearchResultType.USER -> {
                 val intent = Intent(requireContext(), ChatRoomActivity::class.java).apply {

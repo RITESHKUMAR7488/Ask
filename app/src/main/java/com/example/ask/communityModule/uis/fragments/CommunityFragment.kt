@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.ask.R
 import com.example.ask.communityModule.adapters.MyCommunityAdapter
 import com.example.ask.communityModule.models.CommunityModels
+import com.example.ask.communityModule.uis.Activities.CommunityPostsActivity
 import com.example.ask.communityModule.uis.Activities.CreateCommunityActivity
 import com.example.ask.communityModule.uis.Activities.JoinCommunity
 import com.example.ask.communityModule.uis.CommunityActivity
@@ -228,9 +229,7 @@ class CommunityFragment : BaseFragment() {
 
         btnView.setOnClickListener {
             bottomSheetDialog.dismiss()
-            val intent = Intent(requireContext(), CommunityActivity::class.java)
-            intent.putExtra("community_data", community)
-            startActivity(intent)
+            navigateToCommunityPosts(community)
         }
 
         btnLeave.setOnClickListener {
@@ -289,6 +288,13 @@ class CommunityFragment : BaseFragment() {
             }
             .setNegativeButton("No", null)
             .show()
+    }
+    private fun navigateToCommunityPosts(community: CommunityModels) {
+        val intent = Intent(requireContext(), CommunityPostsActivity::class.java).apply {
+            putExtra(CommunityPostsActivity.EXTRA_COMMUNITY_ID, community.communityId)
+            putExtra(CommunityPostsActivity.EXTRA_COMMUNITY_NAME, community.communityName)
+        }
+        startActivity(intent)
     }
 
     override fun onResume() {

@@ -19,12 +19,12 @@
     <string name="cancel">Cancel</string>
     <string name="logout_success">Logged out successfully</string>
 
-        <string name="contact_sender_title">Contact Sender</string>
-        <string name="contact_option_whatsapp">Message on WhatsApp</string>
-        <string name="contact_option_call">Call Directly</string>
-        <string name="whatsapp_message_prefill">Hello, I am %1$s. I\'d like to talk about: \"%2$s\"</string>
-        <string name="contact_info_missing">Contact information for this user is not available.</string>
-        <string name="whatsapp_not_installed">WhatsApp is not installed.</string>
-        <string name="intent_error">Could not perform this action. Please try again.</string>
+    <string name="contact_sender_title">Contact Sender</string>
+    <string name="contact_option_whatsapp">Message on WhatsApp</string>
+    <string name="contact_option_call">Call Directly</string>
+    <string name="whatsapp_message_prefill">Hello, I am %1$s. I\'d like to talk about: \"%2$s\"</string>
+    <string name="contact_info_missing">Contact information for this user is not available.</string>
+    <string name="whatsapp_not_installed">WhatsApp is not installed.</string>
+    <string name="intent_error">Could not perform this action. Please try again.</string>
 
 </resources>
