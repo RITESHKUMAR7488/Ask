@@ -41,6 +41,7 @@ class HomeFragment : BaseFragment() {
     private val homeViewModel: HomeViewModel by viewModels()
     private val notificationViewModel: NotificationViewModel by viewModels()
 
+    // These are declared here
     private lateinit var queryAdapter: QueryAdapter
     private lateinit var searchAdapter: SearchResultAdapter
 
@@ -59,13 +60,14 @@ class HomeFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupRecyclerViews()
+        setupRecyclerViews() // queryAdapter and searchAdapter are initialized here
         setupSearchView()
         observeViewModel()
         setupClickListeners()
     }
 
     private fun setupRecyclerViews() {
+        // Initialization happens here, before they are used
         queryAdapter = QueryAdapter(
             context = requireContext(),
             onQueryClick = { query ->
@@ -113,7 +115,7 @@ class HomeFragment : BaseFragment() {
 
     private fun observeViewModel() {
         // --- Coroutine Usage Explanation ---
-        // We are using viewModelScope.launch to start a coroutine that is tied
+        // We are using viewLifecycleOwner.lifecycleScope.launch to start a coroutine that is tied
         // to the Fragment's view lifecycle.
         // The repeatOnLifecycle(Lifecycle.State.STARTED) block ensures that
         // the coroutine only collects (listens for) data from the 'uiState' Flow
@@ -185,10 +187,12 @@ class HomeFragment : BaseFragment() {
                     // --- Swap adapter based on data type ---
                     when (state.data.firstOrNull()) {
                         is QueryModel -> {
+                            // No unresolved reference, queryAdapter is initialized
                             binding.queryRecycler.adapter = queryAdapter
                             queryAdapter.submitList(state.data as List<QueryModel>)
                         }
                         is SearchResult -> {
+                            // No unresolved reference, searchAdapter is initialized
                             binding.queryRecycler.adapter = searchAdapter
                             searchAdapter.submitList(state.data as List<SearchResult>)
                         }
@@ -210,11 +214,13 @@ class HomeFragment : BaseFragment() {
         // TODO: Navigate to Query Detail
     }
 
+    // --- THIS FUNCTION IS FIXED ---
     private fun onHelpClicked(query: QueryModel) {
         val currentUser = preferenceManager.userModel
         val currentUserId = preferenceManager.userId
 
-        if (currentUser != null && !currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty()) {
+        // <-- FIX: Changed 'communityID' to 'communityId' (lowercase 'd')
+        if (currentUser != null && !currentUserId.isNullOrEmpty() && !query.userId.isNullOrEmpty() && !query.communityId.isNullOrEmpty()) {
             if (currentUserId == query.userId) {
                 motionToastUtil.showWarningToast(
                     requireActivity(),
@@ -223,12 +229,13 @@ class HomeFragment : BaseFragment() {
                 return
             }
 
-            // This function now exists in the ViewModel and has all parameters
+            // This function now has all the required parameters
             notificationViewModel.sendHelpNotification(
                 targetUserId = query.userId!!,
                 queryTitle = query.title ?: "Unknown Query",
                 queryId = query.queryId ?: "",
-                senderName = currentUser.fullName ?: "Unknown User",
+                communityId = query.communityId!!, // <-- FIX: Changed 'communityID' to 'communityId'
+                senderName = currentUser.fullName ?: "Unknown User", // <-- FIX: Changed 'userName' to 'fullName'
                 senderUserId = currentUserId,
                 senderPhoneNumber = currentUser.mobileNumber,
                 senderEmail = currentUser.email,
@@ -237,7 +244,7 @@ class HomeFragment : BaseFragment() {
         } else {
             motionToastUtil.showFailureToast(
                 requireActivity(),
-                "Unable to send help request. Please check your login status."
+                "Unable to send help request. User or query data is missing."
             )
         }
     }

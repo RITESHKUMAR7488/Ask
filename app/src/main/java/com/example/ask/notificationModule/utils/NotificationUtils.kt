@@ -12,6 +12,7 @@ object NotificationUtils {
         targetUserId: String,
         queryTitle: String,
         queryId: String,
+        communityId: String, // Added communityId, it's needed for navigation
         senderUserId: String,
         senderUserName: String,
         senderPhoneNumber: String? = null,
@@ -54,11 +55,13 @@ object NotificationUtils {
             message = message,
             type = "HELP_REQUEST",
             queryId = queryId,
+            communityId = communityId, // Added this
             senderUserId = senderUserId,
             senderUserName = senderUserName,
             senderProfileImage = senderProfileImage,
             timestamp = System.currentTimeMillis(),
-            isRead = false
+            isRead = false,
+            senderPhone = validPhone // --- FIX: Pass the phone number ---
         )
     }
 
@@ -69,6 +72,7 @@ object NotificationUtils {
         targetUserId: String,
         queryTitle: String,
         queryId: String,
+        communityId: String, // Added communityId
         updateMessage: String,
         senderUserId: String? = null,
         senderUserName: String? = null
@@ -79,10 +83,12 @@ object NotificationUtils {
             message = "Update on '$queryTitle': $updateMessage",
             type = "QUERY_UPDATE",
             queryId = queryId,
+            communityId = communityId, // Added this
             senderUserId = senderUserId,
             senderUserName = senderUserName,
             timestamp = System.currentTimeMillis(),
             isRead = false
+            // senderPhone is null by default, which is correct here
         )
     }
 
@@ -93,9 +99,11 @@ object NotificationUtils {
         targetUserId: String,
         queryTitle: String,
         queryId: String,
+        communityId: String, // Added communityId
         senderUserId: String,
         senderUserName: String,
-        senderProfileImage: String? = null
+        senderProfileImage: String? = null,
+        senderPhoneNumber: String? = null // --- FIX: Added phone number parameter ---
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
@@ -103,11 +111,13 @@ object NotificationUtils {
             message = "$senderUserName responded to your query: '$queryTitle'",
             type = "RESPONSE",
             queryId = queryId,
+            communityId = communityId, // Added this
             senderUserId = senderUserId,
             senderUserName = senderUserName,
             senderProfileImage = senderProfileImage,
             timestamp = System.currentTimeMillis(),
-            isRead = false
+            isRead = false,
+            senderPhone = senderPhoneNumber // --- FIX: Pass the phone number ---
         )
     }
 
@@ -120,7 +130,8 @@ object NotificationUtils {
         communityId: String,
         senderUserId: String,
         senderUserName: String,
-        senderProfileImage: String? = null
+        senderProfileImage: String? = null,
+        senderPhoneNumber: String? = null // --- FIX: Added phone number parameter ---
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
@@ -132,7 +143,8 @@ object NotificationUtils {
             senderUserName = senderUserName,
             senderProfileImage = senderProfileImage,
             timestamp = System.currentTimeMillis(),
-            isRead = false
+            isRead = false,
+            senderPhone = senderPhoneNumber // --- FIX: Pass the phone number ---
         )
     }
 
@@ -144,14 +156,15 @@ object NotificationUtils {
         title: String,
         message: String,
         type: String = "GENERAL",
-        actionData: String? = null
+        actionData: String? = null // This was the 'actionData' from your code
     ): NotificationModel {
         return NotificationModel(
             userId = targetUserId,
             title = "📢 $title",
             message = message,
             type = type,
-            actionData = actionData,
+            // --- FIX: Map 'actionData' to 'queryId' (or 'communityId' if appropriate) ---
+            queryId = actionData,
             timestamp = System.currentTimeMillis(),
             isRead = false
         )

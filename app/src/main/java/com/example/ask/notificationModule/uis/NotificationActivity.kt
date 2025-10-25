@@ -1,10 +1,15 @@
 package com.example.ask.notificationModule.uis
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
+import android.widget.LinearLayout
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
+import com.example.ask.R
 import com.example.ask.addModule.uis.AddQueryActivity
 import com.example.ask.chatModule.uis.activities.ChatRoomActivity
 import com.example.ask.communityModule.uis.CommunityActivity
@@ -14,7 +19,9 @@ import com.example.ask.notificationModule.models.NotificationModel
 import com.example.ask.notificationModule.viewModels.NotificationViewModel
 import com.example.ask.utilities.BaseActivity
 import com.example.ask.utilities.UiState
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
+import java.net.URLEncoder
 
 @AndroidEntryPoint
 class NotificationActivity : BaseActivity() {
@@ -53,8 +60,6 @@ class NotificationActivity : BaseActivity() {
 
         binding.swipeRefreshLayout.setOnRefreshListener {
             viewModel.getUserNotifications()
-            // Keep swipeRefreshLayout.isRefreshing = true
-            // The observer will set it to false when data arrives
             binding.swipeRefreshLayout.isRefreshing = true
         }
 
@@ -64,10 +69,10 @@ class NotificationActivity : BaseActivity() {
     }
 
     private fun setupRecyclerView() {
-        // FIX: Correctly initialize NotificationAdapter with context and onNotificationClick
         notificationAdapter = NotificationAdapter(
             context = this,
             onNotificationClick = { notification ->
+                // This is the trigger
                 onNotificationClick(notification)
             }
         )
@@ -98,7 +103,6 @@ class NotificationActivity : BaseActivity() {
                         binding.layoutEmptyNotification.isVisible = false
                         binding.notificationRecyclerView.isVisible = true
                         notificationAdapter.submitList(notifications)
-                        // FIX: Use 'isRead' field from NotificationModel
                         val hasUnread = notifications.any { !it.isRead }
                         binding.markAllRead.isVisible = hasUnread
                     }
@@ -110,7 +114,6 @@ class NotificationActivity : BaseActivity() {
                     binding.notificationRecyclerView.isVisible = false
                     binding.layoutEmptyNotification.isVisible = false
                     binding.markAllRead.isVisible = false
-                    // FIX: Use 'error' field from UiState.Failure
                     binding.errorMessage.text = state.error
                     Log.e(TAG, "Error loading notifications: ${state.error}")
                 }
@@ -124,7 +127,6 @@ class NotificationActivity : BaseActivity() {
                 }
                 is UiState.Success -> {
                     binding.markAllRead.isEnabled = true
-                    // FIX: Use 'motionToastUtil' from BaseActivity
                     motionToastUtil.showSuccessToast(
                         this,
                         "All notifications marked as read."
@@ -132,7 +134,6 @@ class NotificationActivity : BaseActivity() {
                 }
                 is UiState.Failure -> {
                     binding.markAllRead.isEnabled = true
-                    // FIX: Use 'motionToastUtil' and 'error' field
                     motionToastUtil.showErrorToast(
                         this,
                         state.error ?: "Failed to mark all as read."
@@ -144,45 +145,118 @@ class NotificationActivity : BaseActivity() {
 
         viewModel.markAsReadState.observe(this) { state ->
             if (state is UiState.Failure) {
-                // FIX: Use 'motionToastUtil' and 'error' field
                 motionToastUtil.showErrorToast(
                     this,
                     state.error ?: "Failed to mark as read."
                 )
                 Log.e(TAG, "Failed to mark notification as read: ${state.error}")
             }
-            // Success is handled implicitly by the userNotifications listener refreshing the list
         }
     }
 
+
+    // --- MODIFIED CLICK HANDLER ---
     private fun onNotificationClick(notification: NotificationModel) {
         Log.d(TAG, "Notification clicked: ${notification.notificationId}, Type: ${notification.type}")
 
         // 1. Mark notification as read
-        // FIX: Use 'isRead' field and get userId from preferenceManager
         if (!notification.isRead) {
-            val userId = preferenceManager.userId
-            if (!notification.isRead) {
-                // The ViewModel already knows the userId, so just pass the notificationId
+            val userId = preferenceManager.userId // From BaseActivity
+            if (!userId.isNullOrEmpty()) { // Check if userId is not null or empty
                 viewModel.markNotificationAsRead(notification.notificationId ?: return)
-            }else {
-                Log.e(TAG, "User ID is null, cannot mark notification as read.")
+            } else {
+                Log.e(TAG, "User ID is null or empty, cannot mark notification as read.")
             }
         }
 
-        // 2. Navigate based on notification type
-        // Note: Check NotificationUtils.kt for the exact strings you used.
+        // 2. Decide action: Show contact dialog or navigate
+        if (!notification.senderPhone.isNullOrBlank()) {
+            // NEW FEATURE: Show contact dialog
+            showContactOptionsDialog(notification)
+        } else {
+            // OLD FEATURE: Navigate directly
+            navigateToNotificationAction(notification)
+        }
+    }
+
+    // --- NEW FUNCTION: TO SHOW THE DIALOG ---
+    private fun showContactOptionsDialog(notification: NotificationModel) {
+        val phoneNumber = notification.senderPhone ?: return
+
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_contact_options, null)
+
+        // This constructor uses the theme set in themes.xml, fixing the unresolved style error
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        val whatsappButton = dialogView.findViewById<LinearLayout>(R.id.layoutWhatsapp)
+        val callButton = dialogView.findViewById<LinearLayout>(R.id.layoutCall)
+
+        whatsappButton.setOnClickListener {
+            openWhatsApp(phoneNumber, notification)
+            dialog.dismiss()
+        }
+
+        callButton.setOnClickListener {
+            openDialer(phoneNumber)
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    // --- NEW FUNCTION: WHATSAPP INTENT ---
+    private fun openWhatsApp(phoneNumber: String, notification: NotificationModel) {
+        try {
+            // --- THIS IS THE FIX ---
+            // Get current user's name from the userModel in PreferenceManager
+            val currentUserName = preferenceManager.userModel?.fullName ?: "a user"
+            // -----------------------
+
+            val queryMessage = notification.message ?: "your query"
+            val message = getString(R.string.whatsapp_message_prefill, currentUserName, queryMessage)
+
+            val encodedMessage = URLEncoder.encode(message, "UTF-8")
+            val uri = Uri.parse("https://api.whatsapp.com/send?phone=$phoneNumber&text=$encodedMessage")
+
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            startActivity(intent)
+
+        } catch (e: ActivityNotFoundException) {
+            Log.e(TAG, "WhatsApp not installed.", e)
+            motionToastUtil.showErrorToast(this, getString(R.string.whatsapp_not_installed))
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not open WhatsApp.", e)
+            motionToastUtil.showErrorToast(this, getString(R.string.intent_error))
+        }
+    }
+
+    // --- NEW FUNCTION: DIALER INTENT ---
+    private fun openDialer(phoneNumber: String) {
+        try {
+            val intent = Intent(Intent.ACTION_DIAL)
+            intent.data = Uri.parse("tel:$phoneNumber")
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not open dialer.", e)
+            motionToastUtil.showErrorToast(this, getString(R.string.intent_error))
+        }
+    }
+
+    // --- REFACTORED: OLD LOGIC MOVED HERE ---
+    private fun navigateToNotificationAction(notification: NotificationModel) {
         when (notification.type) {
             "HELP_REQUEST",
             "QUERY_UPDATE",
             "RESPONSE" -> {
-                // FIX: Use correct fields 'queryId' and 'communityId'
                 if (notification.queryId.isNullOrEmpty() || notification.communityId.isNullOrEmpty()) {
                     Log.w(TAG, "Missing queryId or communityId for notification type ${notification.type}")
                     showNavigationErrorToast()
                     return
                 }
-                // FIX: Correct Intent creation
                 val intent = Intent(this, AddQueryActivity::class.java)
                 intent.putExtra("queryID", notification.queryId)
                 intent.putExtra("communityID", notification.communityId)
@@ -192,26 +266,22 @@ class NotificationActivity : BaseActivity() {
 
             "COMMUNITY_INVITE",
             "COMMUNITY_JOIN" -> {
-                // FIX: Use correct field 'communityId'
                 if (notification.communityId.isNullOrEmpty()) {
                     Log.w(TAG, "Missing communityId for notification type ${notification.type}")
                     showNavigationErrorToast()
                     return
                 }
-                // FIX: Correct Intent creation
                 val intent = Intent(this, CommunityActivity::class.java)
                 intent.putExtra("communityID", notification.communityId)
                 startActivity(intent)
             }
 
             "CHAT" -> {
-                // FIX: Use correct fields 'queryId'(as chatRoomId), 'senderUserId', 'senderUserName', 'senderProfileImage'
                 if (notification.queryId.isNullOrEmpty() || notification.senderUserId.isNullOrEmpty()) {
                     Log.w(TAG, "Missing chatRoomId (in queryId) or senderUserId for CHAT notification")
                     showNavigationErrorToast()
                     return
                 }
-                // FIX: Correct Intent creation and use ChatRoomActivity constants
                 val intent = Intent(this, ChatRoomActivity::class.java)
                 intent.putExtra("chatRoomId", notification.queryId) // Assuming queryId holds chatRoomId
                 intent.putExtra(ChatRoomActivity.EXTRA_TARGET_USER_ID, notification.senderUserId)
@@ -222,14 +292,12 @@ class NotificationActivity : BaseActivity() {
 
             else -> {
                 Log.w(TAG, "Unknown notification type clicked: ${notification.type}")
-                // FIX: Use 'motionToastUtil'
                 motionToastUtil.showInfoToast(this, "This notification has no specific action.")
             }
         }
     }
 
     private fun showNavigationErrorToast() {
-        // FIX: Use 'motionToastUtil'
         motionToastUtil.showErrorToast(
             this,
             "Could not open notification. Data is missing."
