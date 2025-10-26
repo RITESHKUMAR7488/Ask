@@ -19,7 +19,7 @@
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
+                android:layout_height="wrap_content"
                 app:navigationIcon="@drawable/ic_arrow_back"
                 app:navigationIconTint="@color/white"
                 app:title="Query Details"
@@ -124,7 +124,7 @@
                         <ImageView
                             android:id="@+id/ivQueryImage"
                             android:layout_width="match_parent"
-                            android:layout_height="250dp"
+                            android:layout_height="400dp"
                             android:layout_marginBottom="16dp"
                             android:scaleType="centerCrop"
                             android:visibility="gone"
@@ -234,12 +234,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_margin="16dp"
+            android:layout_margin="40dp"
             android:text="Offer Help"
+            android:gravity="center"
+            android:textAlignment="center"
             android:textColor="@color/white"
             app:backgroundTint="@color/secondary_color"
             app:icon="@drawable/ic_help"
-            app:iconTint="@color/white" />
+            app:iconTint="@color/white"
+            tools:ignore="RtlCompat" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>
